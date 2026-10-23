@@ -1,0 +1,47 @@
+# =========================================================================
+# Unity carpetas temporales y generadas (NO deben subirse a Git)
+# =========================================================================
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+
+# Visual Studio / Visual Studio Code / Rider
+/.vs/
+/.idea/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.opendb
+*.VC.db
+
+# OS archivos del sistema
+.DS_Store
+.DS_Store?
+ehthumbs.db
+Thumbs.db
+
+# Builds compiladas de ejecutable
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# =========================================================================
+# Archivos que SÍ deben subirse (Asegurar que se conserven)
+# =========================================================================
+!/[Aa]ssets/
+!/[Pp]roject[Ss]ettings/
+!/[Pp]ackages/

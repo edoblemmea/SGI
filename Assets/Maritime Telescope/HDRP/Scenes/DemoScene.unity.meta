@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 731d8af316d80d44d85c5eb1f7a7c3e9
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 324010
+  packageName: Maritime Telescope
+  packageVersion: 1.0
+  assetPath: Assets/Maritime Telescope/HDRP/Scenes/DemoScene.unity
+  uploadId: 948524

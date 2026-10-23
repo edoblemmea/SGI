@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 98c1aee41286aa74196114573bc5d629
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 324010
+  packageName: Maritime Telescope
+  packageVersion: 1.0
+  assetPath: Assets/Maritime Telescope/HDRP/Materials/brass_glass_MAT.mat
+  uploadId: 948524

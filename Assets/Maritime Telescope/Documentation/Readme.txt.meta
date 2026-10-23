@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 8afff60ca19b2c4408900021524a5799
+TextScriptImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 324010
+  packageName: Maritime Telescope
+  packageVersion: 1.0
+  assetPath: Assets/Maritime Telescope/Documentation/Readme.txt
+  uploadId: 948524
