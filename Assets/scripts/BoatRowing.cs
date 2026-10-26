@@ -2,202 +2,251 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.XR;
 
-/// Remar con los mandos (version corregida).
-/// - Mano hacia atras respecto al barco con el grip pulsado = empuje hacia delante.
-/// - Mano hacia delante con el grip pulsado = marcha atras (mas floja). Suelta el grip para recuperar el remo.
-/// - Una sola mano = el barco gira hacia el lado contrario. Una mano atras y otra delante = giro sobre si mismo.
-/// Colocar en el GameObject del barco (el que tiene el Rigidbody). Unity 6 (linearVelocity / linearDamping).
+/// Remar con las manos: mantener el GRIP y tirar del mando HACIA TU CUERPO.
+///
+/// Diferencias con el remo antiguo de BoatRowing:
+///  - La direccion del tiron se mide respecto a HACIA DONDE MIRAS (no respecto al eje del barco), asi funciona
+///    aunque estes girado o mirando hacia otro lado dentro del barco.
+///  - Lee el grip y la posicion de las manos DIRECTAMENTE del casco (XR InputDevices), de modo que funciona aunque
+///    los objetos Left/Right Controller esten desactivados por el XR Input Modality Manager.
+///  - Da vibracion en los mandos: un "clic" al agarrar el grip y un zumbido mientras la remada cuenta.
+///  - El barco siempre avanza hacia la proa (BowRef).
+///
+/// USO: ponlo en el MISMO objeto que BoatRowing y el Rigidbody (OldWoodenRowboat_Complete), no en un hijo.
+/// En BoatRowing desmarca "Use Hand Rowing" y "Use Joystick" para que no se sumen fuerzas.
 [RequireComponent(typeof(Rigidbody))]
-public class BoatRowing : MonoBehaviour
+public class BoatHandRowing : MonoBehaviour
 {
-    [Header("Manos (los controllers del XR Origin)")]
-    public Transform leftHand;
-    public Transform rightHand;
+    [Header("Referencias")]
+    public Transform xrOrigin;            // XR Origin (XR Rig)
+    public Transform head;                // Main Camera (si se deja vacio se busca sola)
+    public Transform leftHandFallback;    // Left Controller (solo se usa si el casco no da la posicion)
+    public Transform rightHandFallback;   // Right Controller
+    public Transform bowReference;        // BowRef (su flecha azul debe mirar a la proa)
 
-    [Header("Grip (recomendado: sin grip el barco rema con cualquier gesto)")]
-    public InputActionReference leftGrip;
+    [Header("Grip")]
+    public InputActionReference leftGrip;   // opcional: tambien se lee directamente del casco
     public InputActionReference rightGrip;
     [Range(0f, 1f)] public float gripThreshold = 0.5f;
 
-    [Header("Eje del barco (opcional)")]
-    [Tooltip("Si el eje Z del barco NO apunta a la proa, crea un hijo vacio con su Z hacia la proa y arrastralo aqui.")]
-    public Transform bowReference;
+    [Header("Remada")]
+    public float minPullSpeed = 0.15f;      // m/s minimos de la mano hacia tu cuerpo para contar
+    public float maxPullSpeed = 2.5f;
+    public float pushForce = 6f;            // aceleracion por cada m/s de remada
+    public float reverseMultiplier = 0.3f;  // empujar el mando hacia delante con el grip = marcha atras suave
+    public float turnForce = 1.5f;          // giro por cada m/s de diferencia entre manos
+    public float maxSpeed = 3f;
+    public float maxAngularSpeed = 0.8f;
+    [Range(0.05f, 1f)] public float responsiveness = 0.5f;   // 1 = sin suavizado
 
-    [Header("Ajustes de remada")]
-    public float strokeSpeedThreshold = 0.3f; // m/s minimos de la mano para contar como remada
-    public float maxStrokeSpeed = 3f;         // tope de velocidad de mano que se tiene en cuenta
-    public float pushForce = 6f;
-    public float reverseMultiplier = 0.6f;    // la marcha atras empuja menos que el avance
-    public float turnForce = 3f;
-    public float maxSpeed = 2f;               // velocidad maxima hacia delante (m/s)
-    public float maxAngularSpeed = 0.6f;      // giro maximo (rad/s)
-
-    [Header("Frenado y estabilidad")]
-    public float linearDamping = 0.8f;        // para que el barco se detenga solo
-    public float angularDamping = 2f;
-    public float keelDamping = 2f;            // evita que derive de lado como un jabon
-
-    [Header("Subir / bajar del barco")]
-    public Transform xrOrigin;
-    public Behaviour[] disableWhileOnBoard;   // p. ej. Continuous Move Provider, Gravity Provider
-    public bool startOnBoard = false;         // actívalo solo para probar sin anclas
-    public bool stopBoatOnDisembark = true;
+    [Header("Diagnostico")]
+    public bool debugLogs = true;
+    public bool haptics = true;
 
     Rigidbody rb;
-    CharacterController rigCC;
-    Vector3 prevLeft, prevRight;
-    bool hasPrev;
-    bool boarded;
-    float strokeL, strokeR;                   // positivo = mano hacia atras
+    Transform trackingSpace;
+    Vector3 prevL, prevR;
+    bool hasPrev, wasHeldL, wasHeldR, warned;
+    float pullL, pullR, strokeL, strokeR, rawL, rawR, gripL, gripR, logTimer, notBoardTimer;
+    string srcL = "-", srcR = "-";
 
     Transform Ref => bowReference != null ? bowReference : transform;
+    bool OnBoard => xrOrigin != null && xrOrigin.IsChildOf(transform);
 
-    void Awake()
-    {
-        rb = GetComponent<Rigidbody>();
-        rb.linearDamping = linearDamping;
-        rb.angularDamping = angularDamping;
-        if (xrOrigin != null) rigCC = xrOrigin.GetComponent<CharacterController>();
-    }
+    void Awake() => rb = GetComponent<Rigidbody>();
 
     void OnEnable()
     {
         if (leftGrip != null) leftGrip.action.Enable();
         if (rightGrip != null) rightGrip.action.Enable();
-        hasPrev = false;
     }
 
     void Start()
     {
-        if (startOnBoard)
-        {
-            Board();
-        }
-        else
-        {
-            // Forzamos al controlador a reconocer que estamos fuera del barco
-            if (rigCC != null) rigCC.enabled = true;
-        }
+        if (head == null && Camera.main != null) head = Camera.main.transform;
+        trackingSpace = head != null ? head.parent : null;   // "Camera Offset"
+
+        Debug.Log($"[MANO] Listo. head={(head != null ? head.name : "NULL")}, " +
+                  $"xrOrigin={(xrOrigin != null ? xrOrigin.name : "NULL")}, " +
+                  $"trackingSpace={(trackingSpace != null ? trackingSpace.name : "NULL")}");
     }
-    // Se muestrea en Update porque el tracking de las manos se actualiza por frame,
-    // no en el paso fijo de fisica (con FixedUpdate las lecturas salen irregulares).
+
     void Update()
     {
-        if (!boarded || leftHand == null || rightHand == null)
+        if (!OnBoard || head == null)
         {
-            strokeL = strokeR = 0f;
-            hasPrev = false;
+            notBoardTimer += Time.deltaTime;
+            if (notBoardTimer > 3f)
+            {
+                notBoardTimer = 0f;
+                Debug.LogWarning("[MANO] NO ESTAS A BORDO, no hago nada. " +
+                                 (xrOrigin == null ? "El campo 'Xr Origin' de este script esta VACIO. " :
+                                  "El XR Origin NO es hijo de '" + name + "' (ahora cuelga de '" + (xrOrigin.parent != null ? xrOrigin.parent.name : "la raiz") + "'). ") +
+                                 (head == null ? "Ademas no encuentro la camara (Main Camera)." : ""));
+            }
+            ResetState();
+            return;
+        }
+        notBoardTimer = 0f;
+
+        Vector3 wl, wr;
+        bool okL = TryHand(XRNode.LeftHand, leftHandFallback, out wl, out srcL);
+        bool okR = TryHand(XRNode.RightHand, rightHandFallback, out wr, out srcR);
+        if (!okL || !okR)
+        {
+            if (!warned)
+            {
+                warned = true;
+                Debug.LogWarning("[MANO] No se pueden leer las manos: el casco no las rastrea y los controllers estan desactivados. " +
+                                 "Revisa Quest Link / OpenXR y el XR Input Modality Manager.");
+            }
+            ResetState();
             return;
         }
 
-        Vector3 l = Ref.InverseTransformPoint(leftHand.position);
-        Vector3 r = Ref.InverseTransformPoint(rightHand.position);
+        // Posicion de cada mano en el espacio del barco (asi se descuenta el movimiento del propio barco)
+        Vector3 l = Ref.InverseTransformPoint(wl);
+        Vector3 r = Ref.InverseTransformPoint(wr);
+
+        // Hacia donde mira el jugador, en horizontal y en el espacio del barco
+        Vector3 f = Ref.InverseTransformDirection(head.forward);
+        f.y = 0f;
+        if (f.sqrMagnitude < 0.0001f) { hasPrev = false; return; }
+        f.Normalize();
+
+        gripL = Grip(leftGrip, XRNode.LeftHand);
+        gripR = Grip(rightGrip, XRNode.RightHand);
+        bool heldL = gripL > gripThreshold;
+        bool heldR = gripR > gripThreshold;
+
+        if (haptics)
+        {
+            if (heldL && !wasHeldL) Haptic(XRNode.LeftHand, 0.3f, 0.06f);   // "clic": el grip se detecta
+            if (heldR && !wasHeldR) Haptic(XRNode.RightHand, 0.3f, 0.06f);
+        }
+        wasHeldL = heldL;
+        wasHeldR = heldR;
 
         if (!hasPrev)
         {
-            prevLeft = l; prevRight = r; hasPrev = true;
+            prevL = l;
+            prevR = r;
+            hasPrev = true;
             return;
         }
 
         float dt = Mathf.Max(Time.deltaTime, 0.0001f);
-        strokeL = Stroke(-(l.z - prevLeft.z) / dt, leftGrip);
-        strokeR = Stroke(-(r.z - prevRight.z) / dt, rightGrip);
-        prevLeft = l; prevRight = r;
-    }
 
-    float Stroke(float backSpeed, InputActionReference grip)
-    {
-        if (!GripPressed(grip)) return 0f;
-        if (Mathf.Abs(backSpeed) < strokeSpeedThreshold) return 0f;
-        return Mathf.Clamp(backSpeed, -maxStrokeSpeed, maxStrokeSpeed);
+        // Positivo = la mano se mueve hacia tu cuerpo (en sentido contrario a donde miras)
+        rawL = -Vector3.Dot(l - prevL, f) / dt;
+        rawR = -Vector3.Dot(r - prevR, f) / dt;
+        prevL = l;
+        prevR = r;
+
+        pullL = Mathf.Lerp(pullL, heldL ? rawL : 0f, responsiveness);
+        pullR = Mathf.Lerp(pullR, heldR ? rawR : 0f, responsiveness);
+
+        strokeL = Stroke(pullL);
+        strokeR = Stroke(pullR);
+
+        if (haptics)
+        {
+            if (strokeL > 0f) Haptic(XRNode.LeftHand, Mathf.Clamp01(strokeL * 0.2f), 0.03f);
+            if (strokeR > 0f) Haptic(XRNode.RightHand, Mathf.Clamp01(strokeR * 0.2f), 0.03f);
+        }
+
+        if (debugLogs) Log(heldL || heldR, dt);
     }
 
     void FixedUpdate()
     {
-        float dt = Time.fixedDeltaTime;
-
-        // Quilla: amortigua el deslizamiento lateral para que el barco siga su proa
-        Vector3 local = Ref.InverseTransformDirection(rb.linearVelocity);
-        local.x *= Mathf.Exp(-keelDamping * dt);
-        rb.linearVelocity = Ref.TransformDirection(local);
-
-        if (!boarded) return;
+        if (!OnBoard) return;
 
         float l = Weigh(strokeL);
         float r = Weigh(strokeR);
-        if (l == 0f && r == 0f) return;
 
-        // Avance / marcha atras
         float thrust = (l + r) * 0.5f * pushForce;
-        float fwdSpeed = Vector3.Dot(rb.linearVelocity, Ref.forward);
-        bool canForward = thrust > 0f && fwdSpeed < maxSpeed;
-        bool canReverse = thrust < 0f && fwdSpeed > -maxSpeed * 0.5f;
-        if (canForward || canReverse)
-            rb.AddForce(Ref.forward * thrust, ForceMode.Acceleration);
+        float turn = (l - r) * turnForce;     // remar solo con la izquierda gira a la derecha
 
-        // Giro: mas remada a la izquierda gira a la derecha, y viceversa
-        float turn = (l - r) * turnForce;
-        if (Mathf.Abs(rb.angularVelocity.y) < maxAngularSpeed)
+        if (Mathf.Approximately(thrust, 0f) && Mathf.Approximately(turn, 0f)) return;
+
+        // Siempre hacia la proa, en horizontal
+        Vector3 bow = Vector3.ProjectOnPlane(Ref.forward, Vector3.up).normalized;
+        float fwd = Vector3.Dot(rb.linearVelocity, bow);
+        if ((thrust > 0f && fwd < maxSpeed) || (thrust < 0f && fwd > -maxSpeed * 0.5f))
+            rb.AddForce(bow * thrust, ForceMode.Acceleration);
+
+        float w = rb.angularVelocity.y;
+        if (!Mathf.Approximately(turn, 0f) && (Mathf.Abs(w) < maxAngularSpeed || Mathf.Sign(turn) != Mathf.Sign(w)))
             rb.AddTorque(Vector3.up * turn, ForceMode.Acceleration);
-
-        if (Mathf.Abs(l) > 0f) Haptic(XRNode.LeftHand, Mathf.Clamp01(Mathf.Abs(l) * 0.2f));
-        if (Mathf.Abs(r) > 0f) Haptic(XRNode.RightHand, Mathf.Clamp01(Mathf.Abs(r) * 0.2f));
     }
 
-    // Marcha atras mas floja que el avance
+    float Stroke(float v)
+    {
+        if (Mathf.Abs(v) < minPullSpeed) return 0f;
+        return Mathf.Clamp(v, -maxPullSpeed, maxPullSpeed);
+    }
+
     float Weigh(float s) => s >= 0f ? s : s * reverseMultiplier;
 
-    bool GripPressed(InputActionReference a)
+    void ResetState()
     {
-        if (a == null) return true; // sin grip asignado: siempre activo
-        return a.action.ReadValue<float>() > gripThreshold;
+        pullL = pullR = strokeL = strokeR = 0f;
+        hasPrev = false;
+        wasHeldL = wasHeldR = false;
     }
 
-    void Haptic(XRNode node, float amplitude)
+    // Posicion de la mano en el mundo: primero directamente del casco; si no, del objeto Controller si esta activo
+    bool TryHand(XRNode node, Transform fallback, out Vector3 world, out string source)
     {
-        var device = InputDevices.GetDeviceAtXRNode(node);
-        if (device.isValid) device.SendHapticImpulse(0, amplitude, 0.05f);
+        world = default;
+        source = "-";
+
+        var dev = InputDevices.GetDeviceAtXRNode(node);
+        Vector3 p;
+        if (dev.isValid && trackingSpace != null && dev.TryGetFeatureValue(UnityEngine.XR.CommonUsages.devicePosition, out p))
+        {
+            world = trackingSpace.TransformPoint(p);
+            source = "casco";
+            return true;
+        }
+
+        if (fallback != null && fallback.gameObject.activeInHierarchy)
+        {
+            world = fallback.position;
+            source = "transform";
+            return true;
+        }
+
+        return false;
     }
 
-    // ---- Llamar desde eventos de los Teleportation Anchors (Teleporting) ----
-
-    /// Subir al barco: el rig pasa a ser hijo del barco y se desactiva el movimiento por joystick.
-    public void Board()
+    // Grip: el mayor entre la accion asignada y la lectura directa del casco
+    float Grip(InputActionReference a, XRNode node)
     {
-        if (boarded) return;
-        boarded = true;
+        float v = 0f;
+        if (a != null) v = a.action.ReadValue<float>();
 
-        if (xrOrigin != null)
-        {
-            xrOrigin.SetParent(transform, true);
-            if (rigCC != null) rigCC.enabled = false;
-        }
+        var dev = InputDevices.GetDeviceAtXRNode(node);
+        float g;
+        if (dev.isValid && dev.TryGetFeatureValue(UnityEngine.XR.CommonUsages.grip, out g))
+            v = Mathf.Max(v, g);
 
-        foreach (var b in disableWhileOnBoard)
-            if (b != null) b.enabled = false;
+        return v;
     }
 
-    /// Bajar del barco: se suelta el rig y se reactiva TODO lo que Board() desactivo.
-    public void Disembark()
+    void Haptic(XRNode node, float amplitude, float duration)
     {
-        if (!boarded) return;
-        boarded = false;
+        var dev = InputDevices.GetDeviceAtXRNode(node);
+        if (dev.isValid) dev.SendHapticImpulse(0, amplitude, duration);
+    }
 
-        if (xrOrigin != null)
-        {
-            xrOrigin.SetParent(null, true);
-            // Dejar el rig vertical aunque el barco estuviera inclinado
-            xrOrigin.rotation = Quaternion.Euler(0f, xrOrigin.eulerAngles.y, 0f);
-            if (rigCC != null) rigCC.enabled = true;   // <- antes no se reactivaba
-        }
-
-        foreach (var b in disableWhileOnBoard)
-            if (b != null) b.enabled = true;
-
-        if (stopBoatOnDisembark)
-        {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-        }
+    void Log(bool holding, float dt)
+    {
+        logTimer += dt;
+        if (logTimer < (holding ? 0.25f : 2f)) return;
+        logTimer = 0f;
+        Debug.Log($"[MANO] grip izq {gripL:F2} der {gripR:F2} | tirar izq {rawL:F2} der {rawR:F2} m/s | " +
+                  $"remada izq {strokeL:F2} der {strokeR:F2} | fuente {srcL}/{srcR}");
     }
 }
