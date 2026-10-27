@@ -730,6 +730,11 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5431039969775652892, guid: 6b114eee40be4d749b7205546fcb5a17, type: 3}
   m_PrefabInstance: {fileID: 586899354}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &332851118 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1670256625, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+  m_PrefabInstance: {fileID: 1514253849}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &360073323
 GameObject:
   m_ObjectHideFlags: 0
@@ -2599,6 +2604,11 @@ LightingSettings:
   m_PVRFilteringAtrousPositionSigmaIndirect: 2
   m_PVRFilteringAtrousPositionSigmaAO: 1
   m_RespectSceneVisibilityWhenBakingGI: 0
+--- !u!4 &1294961473 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 202364688, guid: f6336ac4ac8b4d34bc5072418cdc62a0, type: 3}
+  m_PrefabInstance: {fileID: 1514253849}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &1338307398 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5431039969775652892, guid: 6b114eee40be4d749b7205546fcb5a17, type: 3}
@@ -4721,11 +4731,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BoatHandRowing
   xrOrigin: {fileID: 457136144}
   head: {fileID: 2017899785}
-  leftHandFallback: {fileID: 0}
-  rightHandFallback: {fileID: 0}
+  leftHandFallback: {fileID: 1294961473}
+  rightHandFallback: {fileID: 332851118}
   bowReference: {fileID: 32492876}
-  leftGrip: {fileID: 0}
-  rightGrip: {fileID: 0}
+  leftGrip: {fileID: 6558622148059887818, guid: c348712bda248c246b8c49b3db54643f, type: 3}
+  rightGrip: {fileID: -1758520528963094988, guid: c348712bda248c246b8c49b3db54643f, type: 3}
   gripThreshold: 0.5
   requireOarGrab: 1
   minPullSpeed: 0.15
@@ -5013,10 +5023,10 @@ MonoBehaviour:
   handle: {fileID: 325501193}
   head: {fileID: 0}
   preferredHand: 5
-  leftHand: {fileID: 0}
-  rightHand: {fileID: 0}
-  leftGrip: {fileID: 0}
-  rightGrip: {fileID: 0}
+  leftHand: {fileID: 1294961473}
+  rightHand: {fileID: 332851118}
+  leftGrip: {fileID: 6558622148059887818, guid: c348712bda248c246b8c49b3db54643f, type: 3}
+  rightGrip: {fileID: -1758520528963094988, guid: c348712bda248c246b8c49b3db54643f, type: 3}
   showHandleMarker: 1
   markerSize: 0.07
   grabRadius: 0.22
@@ -5041,10 +5051,10 @@ MonoBehaviour:
   handle: {fileID: 1208406137}
   head: {fileID: 0}
   preferredHand: 4
-  leftHand: {fileID: 0}
-  rightHand: {fileID: 0}
-  leftGrip: {fileID: 0}
-  rightGrip: {fileID: 0}
+  leftHand: {fileID: 1294961473}
+  rightHand: {fileID: 332851118}
+  leftGrip: {fileID: 6558622148059887818, guid: c348712bda248c246b8c49b3db54643f, type: 3}
+  rightGrip: {fileID: -1758520528963094988, guid: c348712bda248c246b8c49b3db54643f, type: 3}
   showHandleMarker: 1
   markerSize: 0.07
   grabRadius: 0.22
