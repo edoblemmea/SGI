@@ -1,252 +1,119 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.XR;
+using UnityEngine.Events;
 
-/// Remar con las manos: mantener el GRIP y tirar del mando HACIA TU CUERPO.
+/// Subir / bajar del barco y estabilidad (amortiguacion y quilla). NO empuja el barco: eso lo hace BoatHandRowing.
 ///
-/// Diferencias con el remo antiguo de BoatRowing:
-///  - La direccion del tiron se mide respecto a HACIA DONDE MIRAS (no respecto al eje del barco), asi funciona
-///    aunque estes girado o mirando hacia otro lado dentro del barco.
-///  - Lee el grip y la posicion de las manos DIRECTAMENTE del casco (XR InputDevices), de modo que funciona aunque
-///    los objetos Left/Right Controller esten desactivados por el XR Input Modality Manager.
-///  - Da vibracion en los mandos: un "clic" al agarrar el grip y un zumbido mientras la remada cuenta.
-///  - El barco siempre avanza hacia la proa (BowRef).
-///
-/// USO: ponlo en el MISMO objeto que BoatRowing y el Rigidbody (OldWoodenRowboat_Complete), no en un hijo.
-/// En BoatRowing desmarca "Use Hand Rowing" y "Use Joystick" para que no se sumen fuerzas.
-[RequireComponent(typeof(Rigidbody))]
-public class BoatHandRowing : MonoBehaviour
+/// - Board(): el XR Origin pasa a ser HIJO del barco, se desactivan su CharacterController y los providers de
+///   'disableWhileOnBoard' (Move, Gravity, Jump, Grab Move, Climb...).
+/// - Disembark(): se suelta el XR Origin y se reactiva todo.
+/// Llamar desde los eventos de los Teleportation Anchors (anclaBarco -> Board, anclaMuelle -> Disembark).
+/// Colocar en el GameObject del barco (el que tiene el Rigidbody), junto a BoatHandRowing.
+public class BoatRowing : MonoBehaviour
 {
-    [Header("Referencias")]
-    public Transform xrOrigin;            // XR Origin (XR Rig)
-    public Transform head;                // Main Camera (si se deja vacio se busca sola)
-    public Transform leftHandFallback;    // Left Controller (solo se usa si el casco no da la posicion)
-    public Transform rightHandFallback;   // Right Controller
-    public Transform bowReference;        // BowRef (su flecha azul debe mirar a la proa)
+    [Header("Eje del barco (opcional)")]
+    [Tooltip("BowRef: hijo vacio con su flecha azul (Z) mirando a la proa. Si se deja vacio se usa este objeto.")]
+    public Transform bowReference;
 
-    [Header("Grip")]
-    public InputActionReference leftGrip;   // opcional: tambien se lee directamente del casco
-    public InputActionReference rightGrip;
-    [Range(0f, 1f)] public float gripThreshold = 0.5f;
+    [Header("Frenado y estabilidad")]
+    [Tooltip("Se aplica al Rigidbody en Awake: cambialo AQUI, no en el Rigidbody.")]
+    public float linearDamping = 0.8f;
+    public float angularDamping = 2f;
+    [Tooltip("Amortigua el deslizamiento lateral para que el barco siga su proa")]
+    public float keelDamping = 2f;
 
-    [Header("Remada")]
-    public float minPullSpeed = 0.15f;      // m/s minimos de la mano hacia tu cuerpo para contar
-    public float maxPullSpeed = 2.5f;
-    public float pushForce = 6f;            // aceleracion por cada m/s de remada
-    public float reverseMultiplier = 0.3f;  // empujar el mando hacia delante con el grip = marcha atras suave
-    public float turnForce = 1.5f;          // giro por cada m/s de diferencia entre manos
-    public float maxSpeed = 3f;
-    public float maxAngularSpeed = 0.8f;
-    [Range(0.05f, 1f)] public float responsiveness = 0.5f;   // 1 = sin suavizado
+    [Header("Subir / bajar del barco")]
+    [Tooltip("XR Origin (XR Rig)")]
+    public Transform xrOrigin;
+    [Tooltip("Providers a desactivar a bordo: Move, Gravity, Jump, Grab Move, Climb...")]
+    public Behaviour[] disableWhileOnBoard;
+    [Tooltip("Empezar ya a bordo (para probar sin anclas). El XR Origin debe estar colocado dentro del barco.")]
+    public bool startOnBoard = false;
+    public bool stopBoatOnDisembark = true;
+
+    [Header("Eventos")]
+    public UnityEvent onBoarded;
+    public UnityEvent onDisembarked;
 
     [Header("Diagnostico")]
     public bool debugLogs = true;
-    public bool haptics = true;
 
     Rigidbody rb;
-    Transform trackingSpace;
-    Vector3 prevL, prevR;
-    bool hasPrev, wasHeldL, wasHeldR, warned;
-    float pullL, pullR, strokeL, strokeR, rawL, rawR, gripL, gripR, logTimer, notBoardTimer;
-    string srcL = "-", srcR = "-";
+    CharacterController rigCC;
+    bool boarded;
 
+    public bool IsBoarded => boarded;
     Transform Ref => bowReference != null ? bowReference : transform;
-    bool OnBoard => xrOrigin != null && xrOrigin.IsChildOf(transform);
 
-    void Awake() => rb = GetComponent<Rigidbody>();
-
-    void OnEnable()
+    void Awake()
     {
-        if (leftGrip != null) leftGrip.action.Enable();
-        if (rightGrip != null) rightGrip.action.Enable();
-    }
-
-    void Start()
-    {
-        if (head == null && Camera.main != null) head = Camera.main.transform;
-        trackingSpace = head != null ? head.parent : null;   // "Camera Offset"
-
-        Debug.Log($"[MANO] Listo. head={(head != null ? head.name : "NULL")}, " +
-                  $"xrOrigin={(xrOrigin != null ? xrOrigin.name : "NULL")}, " +
-                  $"trackingSpace={(trackingSpace != null ? trackingSpace.name : "NULL")}");
-    }
-
-    void Update()
-    {
-        if (!OnBoard || head == null)
+        rb = GetComponent<Rigidbody>();
+        if (rb == null)
         {
-            notBoardTimer += Time.deltaTime;
-            if (notBoardTimer > 3f)
-            {
-                notBoardTimer = 0f;
-                Debug.LogWarning("[MANO] NO ESTAS A BORDO, no hago nada. " +
-                                 (xrOrigin == null ? "El campo 'Xr Origin' de este script esta VACIO. " :
-                                  "El XR Origin NO es hijo de '" + name + "' (ahora cuelga de '" + (xrOrigin.parent != null ? xrOrigin.parent.name : "la raiz") + "'). ") +
-                                 (head == null ? "Ademas no encuentro la camara (Main Camera)." : ""));
-            }
-            ResetState();
+            Debug.LogError($"[BARCO] '{name}' no tiene Rigidbody. BoatRowing debe ir en el objeto del Rigidbody del barco.");
+            enabled = false;
             return;
         }
-        notBoardTimer = 0f;
+        rb.linearDamping = linearDamping;
+        rb.angularDamping = angularDamping;
+        if (xrOrigin != null) rigCC = xrOrigin.GetComponent<CharacterController>();
+        else Debug.LogWarning("[BARCO] El campo 'Xr Origin' esta VACIO: no se podra embarcar.");
 
-        Vector3 wl, wr;
-        bool okL = TryHand(XRNode.LeftHand, leftHandFallback, out wl, out srcL);
-        bool okR = TryHand(XRNode.RightHand, rightHandFallback, out wr, out srcR);
-        if (!okL || !okR)
-        {
-            if (!warned)
-            {
-                warned = true;
-                Debug.LogWarning("[MANO] No se pueden leer las manos: el casco no las rastrea y los controllers estan desactivados. " +
-                                 "Revisa Quest Link / OpenXR y el XR Input Modality Manager.");
-            }
-            ResetState();
-            return;
-        }
-
-        // Posicion de cada mano en el espacio del barco (asi se descuenta el movimiento del propio barco)
-        Vector3 l = Ref.InverseTransformPoint(wl);
-        Vector3 r = Ref.InverseTransformPoint(wr);
-
-        // Hacia donde mira el jugador, en horizontal y en el espacio del barco
-        Vector3 f = Ref.InverseTransformDirection(head.forward);
-        f.y = 0f;
-        if (f.sqrMagnitude < 0.0001f) { hasPrev = false; return; }
-        f.Normalize();
-
-        gripL = Grip(leftGrip, XRNode.LeftHand);
-        gripR = Grip(rightGrip, XRNode.RightHand);
-        bool heldL = gripL > gripThreshold;
-        bool heldR = gripR > gripThreshold;
-
-        if (haptics)
-        {
-            if (heldL && !wasHeldL) Haptic(XRNode.LeftHand, 0.3f, 0.06f);   // "clic": el grip se detecta
-            if (heldR && !wasHeldR) Haptic(XRNode.RightHand, 0.3f, 0.06f);
-        }
-        wasHeldL = heldL;
-        wasHeldR = heldR;
-
-        if (!hasPrev)
-        {
-            prevL = l;
-            prevR = r;
-            hasPrev = true;
-            return;
-        }
-
-        float dt = Mathf.Max(Time.deltaTime, 0.0001f);
-
-        // Positivo = la mano se mueve hacia tu cuerpo (en sentido contrario a donde miras)
-        rawL = -Vector3.Dot(l - prevL, f) / dt;
-        rawR = -Vector3.Dot(r - prevR, f) / dt;
-        prevL = l;
-        prevR = r;
-
-        pullL = Mathf.Lerp(pullL, heldL ? rawL : 0f, responsiveness);
-        pullR = Mathf.Lerp(pullR, heldR ? rawR : 0f, responsiveness);
-
-        strokeL = Stroke(pullL);
-        strokeR = Stroke(pullR);
-
-        if (haptics)
-        {
-            if (strokeL > 0f) Haptic(XRNode.LeftHand, Mathf.Clamp01(strokeL * 0.2f), 0.03f);
-            if (strokeR > 0f) Haptic(XRNode.RightHand, Mathf.Clamp01(strokeR * 0.2f), 0.03f);
-        }
-
-        if (debugLogs) Log(heldL || heldR, dt);
+        // Embarcar en Awake (no en Start) para que el Gravity provider no tire al jugador el primer frame
+        if (startOnBoard) Board();
     }
 
     void FixedUpdate()
     {
-        if (!OnBoard) return;
-
-        float l = Weigh(strokeL);
-        float r = Weigh(strokeR);
-
-        float thrust = (l + r) * 0.5f * pushForce;
-        float turn = (l - r) * turnForce;     // remar solo con la izquierda gira a la derecha
-
-        if (Mathf.Approximately(thrust, 0f) && Mathf.Approximately(turn, 0f)) return;
-
-        // Siempre hacia la proa, en horizontal
-        Vector3 bow = Vector3.ProjectOnPlane(Ref.forward, Vector3.up).normalized;
-        float fwd = Vector3.Dot(rb.linearVelocity, bow);
-        if ((thrust > 0f && fwd < maxSpeed) || (thrust < 0f && fwd > -maxSpeed * 0.5f))
-            rb.AddForce(bow * thrust, ForceMode.Acceleration);
-
-        float w = rb.angularVelocity.y;
-        if (!Mathf.Approximately(turn, 0f) && (Mathf.Abs(w) < maxAngularSpeed || Mathf.Sign(turn) != Mathf.Sign(w)))
-            rb.AddTorque(Vector3.up * turn, ForceMode.Acceleration);
+        // Quilla: amortigua el deslizamiento lateral
+        Vector3 local = Ref.InverseTransformDirection(rb.linearVelocity);
+        local.x *= Mathf.Exp(-keelDamping * Time.fixedDeltaTime);
+        rb.linearVelocity = Ref.TransformDirection(local);
     }
 
-    float Stroke(float v)
+    /// Subir al barco: el rig pasa a ser hijo del barco y se desactiva la locomocion.
+    public void Board()
     {
-        if (Mathf.Abs(v) < minPullSpeed) return 0f;
-        return Mathf.Clamp(v, -maxPullSpeed, maxPullSpeed);
-    }
+        if (boarded) return;
+        boarded = true;
 
-    float Weigh(float s) => s >= 0f ? s : s * reverseMultiplier;
-
-    void ResetState()
-    {
-        pullL = pullR = strokeL = strokeR = 0f;
-        hasPrev = false;
-        wasHeldL = wasHeldR = false;
-    }
-
-    // Posicion de la mano en el mundo: primero directamente del casco; si no, del objeto Controller si esta activo
-    bool TryHand(XRNode node, Transform fallback, out Vector3 world, out string source)
-    {
-        world = default;
-        source = "-";
-
-        var dev = InputDevices.GetDeviceAtXRNode(node);
-        Vector3 p;
-        if (dev.isValid && trackingSpace != null && dev.TryGetFeatureValue(UnityEngine.XR.CommonUsages.devicePosition, out p))
+        if (xrOrigin != null)
         {
-            world = trackingSpace.TransformPoint(p);
-            source = "casco";
-            return true;
+            xrOrigin.SetParent(transform, true);
+            if (rigCC != null) rigCC.enabled = false;
         }
 
-        if (fallback != null && fallback.gameObject.activeInHierarchy)
+        foreach (var b in disableWhileOnBoard)
+            if (b != null) b.enabled = false;
+
+        if (debugLogs) Debug.Log($"[BARCO] A bordo. XR Origin ahora cuelga de '{(xrOrigin != null && xrOrigin.parent != null ? xrOrigin.parent.name : "NADA")}'. " +
+                                 $"Desactivados {disableWhileOnBoard?.Length ?? 0} providers.");
+        onBoarded?.Invoke();
+    }
+
+    /// Bajar del barco: se suelta el rig y se reactiva TODO lo que Board() desactivo.
+    public void Disembark()
+    {
+        if (!boarded) return;
+        boarded = false;
+
+        if (xrOrigin != null)
         {
-            world = fallback.position;
-            source = "transform";
-            return true;
+            xrOrigin.SetParent(null, true);
+            // Dejar el rig vertical aunque el barco estuviera inclinado
+            xrOrigin.rotation = Quaternion.Euler(0f, xrOrigin.eulerAngles.y, 0f);
+            if (rigCC != null) rigCC.enabled = true;
         }
 
-        return false;
-    }
+        foreach (var b in disableWhileOnBoard)
+            if (b != null) b.enabled = true;
 
-    // Grip: el mayor entre la accion asignada y la lectura directa del casco
-    float Grip(InputActionReference a, XRNode node)
-    {
-        float v = 0f;
-        if (a != null) v = a.action.ReadValue<float>();
+        if (stopBoatOnDisembark)
+        {
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
 
-        var dev = InputDevices.GetDeviceAtXRNode(node);
-        float g;
-        if (dev.isValid && dev.TryGetFeatureValue(UnityEngine.XR.CommonUsages.grip, out g))
-            v = Mathf.Max(v, g);
-
-        return v;
-    }
-
-    void Haptic(XRNode node, float amplitude, float duration)
-    {
-        var dev = InputDevices.GetDeviceAtXRNode(node);
-        if (dev.isValid) dev.SendHapticImpulse(0, amplitude, duration);
-    }
-
-    void Log(bool holding, float dt)
-    {
-        logTimer += dt;
-        if (logTimer < (holding ? 0.25f : 2f)) return;
-        logTimer = 0f;
-        Debug.Log($"[MANO] grip izq {gripL:F2} der {gripR:F2} | tirar izq {rawL:F2} der {rawR:F2} m/s | " +
-                  $"remada izq {strokeL:F2} der {strokeR:F2} | fuente {srcL}/{srcR}");
+        if (debugLogs) Debug.Log("[BARCO] Desembarcado. Locomocion reactivada.");
+        onDisembarked?.Invoke();
     }
 }
