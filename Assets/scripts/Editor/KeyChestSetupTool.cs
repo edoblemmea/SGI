@@ -54,6 +54,37 @@ public class KeyChestSetupTool : EditorWindow
         chest = (GameObject)EditorGUILayout.ObjectField("Cofre cerrado (chest_close)", chest, typeof(GameObject), true);
         using (new EditorGUI.DisabledScope(chest == null))
             if (GUILayout.Button("Preparar cofre")) PrepareChest();
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("4. Bolsillo para la llave", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("Para llevar la llave mientras remas o trepas: se suelta junto a la cadera derecha y se queda ahi. " +
+                                "Si cae al agua vuelve sola al bolsillo.", MessageType.None);
+        using (new EditorGUI.DisabledScope(key == null))
+            if (GUILayout.Button("Crear / actualizar bolsillo")) CreatePocket();
+    }
+
+    void CreatePocket()
+    {
+        var grab = key.GetComponent<XRGrabInteractable>();
+        if (grab == null) { PrepareKey(); grab = key.GetComponent<XRGrabInteractable>(); }
+        var pocket = FindAnyObjectByType<KeyPocket>(FindObjectsInactive.Include);
+        if (pocket == null)
+        {
+            var go = new GameObject("Bolsillo llave");
+            Undo.RegisterCreatedObjectUndo(go, "Bolsillo");
+            pocket = go.AddComponent<KeyPocket>();
+        }
+        Undo.RecordObject(pocket, "Bolsillo");
+        pocket.key = grab;
+        var cam = Camera.main;
+        if (cam != null) pocket.head = cam.transform;
+        // DEMO: el agua no tiene collider; su altura ~ el fondo del casco de la barca de remos
+        var boat = FindAnyObjectByType<BoatRowing>(FindObjectsInactive.Include);
+        if (boat != null) pocket.lostBelowY = SetupToolUtils.RenderBounds(boat.gameObject).min.y - 0.3f;
+        else Debug.LogWarning("[BOLSILLO] No hay barca: pon a mano 'Lost Below Y' (un poco por debajo del agua).");
+        Selection.activeObject = pocket.gameObject;
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(pocket.gameObject.scene);
+        Debug.Log($"[BOLSILLO] Bolsillo listo para '{key.name}'. La llave vuelve sola si baja de y={pocket.lostBelowY:F2}. Guarda (Ctrl+S).");
     }
 
     // ------------------------------------------------------------------ 1
@@ -94,6 +125,12 @@ public class KeyChestSetupTool : EditorWindow
     void Hide(ShakeablePalm target, ShakeablePalm[] all)
     {
         if (key.GetComponent<KeyItem>() == null) PrepareKey();
+        // Solo en el editor: avisar si hay mas de una llave (p. ej. una copia de rust_key tirada en el suelo)
+        var others = FindObjectsByType<Transform>(FindObjectsInactive.Include)
+            .Where(t => t.gameObject != key && (t.GetComponent<KeyItem>() != null || t.name.StartsWith("rust_key")) && !t.IsChildOf(key.transform))
+            .Select(t => t.name).ToArray();
+        if (others.Length > 0)
+            Debug.LogWarning($"[LLAVE] Hay otras llaves en la escena ademas de '{key.name}': {string.Join(", ", others)}. Si sobran, borralas.");
         foreach (var p in all.Where(p => p.hiddenKey == key.transform && p != target))
         {
             Undo.RecordObject(p, "Llave");
@@ -102,6 +139,12 @@ public class KeyChestSetupTool : EditorWindow
         Undo.RecordObject(target, "Llave");
         target.hiddenKey = key.transform;
         target.dropKeyAfterCoconuts = afterCoconuts;
+        // En Play la llave sube sola a la copa; la muevo ya en el editor para que no se quede tirada donde estaba
+        if (target.crown != null)
+        {
+            Undo.RecordObject(key.transform, "Llave");
+            key.transform.position = target.crown.position + Vector3.down * 0.2f;
+        }
         palm = target;
 
         var gm = FindAnyObjectByType<GameManager>();

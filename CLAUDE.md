@@ -161,6 +161,8 @@ Estado: **todo el código está escrito y compila** (comprobado con el Roslyn de
   - hijos `chest_close` (cerrado), `chest_open` (abierto, oculto), `coins` (recompensa, oculta) y `Cerradura`, con `XRSocketInteractor` y una esfera trigger **encima de la tapa**;
   - al encajar la llave correcta cambia de modelo, muestra las monedas, gasta la llave y completa el objetivo `cofre`;
   - para probarlo sin casco: menú contextual **Abrir ahora**.
+- **Bolsillo (`KeyPocket`, *Llave y cofre > 4*):** para llevar la llave mientras remas o trepas (hacen falta las dos manos y el grip, y el fondo de la barca no tiene collider). Se suelta junto a la cadera derecha (bolita verde) y se queda ahí, kinematic y con collider trigger para no empujar la barca. Si cae por debajo de `lostBelowY` (el agua) vuelve sola. Prefijo `[BOLSILLO]`.
+- La llave necesita su Mesh Collider en **Convex** (si no, Unity lo ignora con Rigidbody dinámico y atraviesa el suelo): lo hace *Preparar llave*.
 - Lo monta *Isla Pirata > Llave y cofre*.
 
 ### 5.2 Barca y remo
@@ -255,6 +257,7 @@ Scripts:
   - `XRGeneralGrabTransformer` con `allowTwoHandedScaling` (escala de 0.6x a 2.5x) → **requisito de escalado**.
 - **Wayfinding:** icono "estás aquí" que gira con la cabeza; lugares `MapMarker` (Muelle descubierto desde el principio, Mirador, Palmeral, Barco fantasma). Se **descubren** al acercarse (`discoverRadius`); el barco aparece tras el objetivo `otear` (`hiddenUntilObjective`).
 - **Viaje rápido (target-based):** el botón de un lugar descubierto con `allowFastTravel` llama a `TeleportationProvider.QueueTeleportRequest` hacia su `travelPoint`. Si vas en la barca, antes hace `Disembark`. El barco fantasma **no** permite viajar: hay que remar.
+- **Viaje guiado (steering):** si `TreasureMap.glideTravel` está marcado (opción *Viaje con la carta* del menú de la muñeca), en vez de teletransportar te desliza hasta el lugar con `GuidedTravel` (7 m/s, arranque y frenada suaves, sigue el suelo con raycast, viñeta si está activa, **B** = parar; la carta viaja contigo). `GuidedTravel` lo añade la carta en `Start`. Prefijo `[VIAJE]`.
 - **Objetivos:** `GameManager.objectivesText` apunta al texto de la carta. Se desactiva el `Panel Objetivos` de la muñeca.
 - **Botón Menú del mando izquierdo:** trae la carta delante de ti.
 - La escena necesita un **EventSystem con `XRUIInputModule`**, que crea la herramienta.

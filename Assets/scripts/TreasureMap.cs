@@ -11,7 +11,8 @@ using UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation;
 /// - Wayfinding: vista cenital de la isla con "estas aqui" (icono que gira con tu cabeza) y los lugares (MapMarker).
 /// - Manipulacion: se coge por las varillas; con DOS manos, al separarlas la carta se AGRANDA (escalado) y al
 ///   juntarlas se encoge (XRGeneralGrabTransformer con Allow Two Handed Scaling).
-/// - Navegacion target-based: apunta con el rayo a un lugar YA DESCUBIERTO y pulsa el gatillo -> viajas alli.
+/// - Navegacion target-based: apunta con el rayo a un lugar YA DESCUBIERTO y pulsa el gatillo -> viajas alli
+///   (teletransporte, o deslizandote con GuidedTravel si 'Glide Travel' esta marcado; se elige en el menu de la muneca).
 ///   El barco fantasma no permite viaje rapido: hay que llegar remando.
 /// - Objetivos y pistas: el texto de abajo lo rellena el GameManager (campo Objectives Text).
 /// - Boton MENU del mando izquierdo: la carta vuelve delante de ti (no se pierde nunca).
@@ -39,6 +40,14 @@ public class TreasureMap : MonoBehaviour
     public TeleportationProvider teleportation;
     [Tooltip("Si viajas estando en la barca, primero desembarcas")]
     public BoatRowing boat;
+
+    [Header("Modo de viaje")]
+    [Tooltip("Desmarcado = teletransporte al instante. Marcado = te deslizas hasta alli, mas rapido que andando. Se cambia en el menu de la muneca")]
+    public bool glideTravel = false;
+    [Tooltip("Velocidad al deslizarte (m/s)")]
+    public float glideSpeed = 7f;
+    [Tooltip("Se anade solo si se deja vacio")]
+    public GuidedTravel guidedTravel;
 
     [Header("Recuperar la carta")]
     public bool recallWithMenuButton = true;
@@ -70,6 +79,12 @@ public class TreasureMap : MonoBehaviour
         if (head == null && Camera.main != null) head = Camera.main.transform;
         if (teleportation == null) Debug.LogWarning("[CARTA] Falta 'Teleportation' (TeleportationProvider del XR Origin): no habra viaje rapido.");
         if (markerTemplate != null) markerTemplate.gameObject.SetActive(false);
+        if (guidedTravel == null) guidedTravel = GetComponent<GuidedTravel>();
+        if (guidedTravel == null) guidedTravel = gameObject.AddComponent<GuidedTravel>();
+        guidedTravel.xrOrigin = xrOrigin;
+        guidedTravel.head = head;
+        guidedTravel.boat = boat;
+        guidedTravel.carryAlong = new[] { transform };   // la carta viaja contigo
 
         foreach (var m in FindObjectsByType<MapMarker>(FindObjectsInactive.Exclude)) AddEntry(m);
         if (GameManager.Instance != null) GameManager.Instance.onObjectiveCompleted.AddListener(OnObjective);
@@ -185,6 +200,16 @@ public class TreasureMap : MonoBehaviour
         if (m == null) return;
         if (!m.allowFastTravel) { Say($"A {m.label} hay que llegar remando"); return; }
         if (!m.Discovered) { Say("Todavia no has estado ahi"); return; }
+        if (glideTravel && guidedTravel != null)
+        {
+            guidedTravel.speed = glideSpeed;
+            guidedTravel.debugLogs = debugLogs;
+            guidedTravel.TravelTo(m.Destination, m.label);
+            Say($"Rumbo a {m.label}... (B = parar)");
+            XRHandInput.HapticBoth(0.3f, 0.08f);
+            if (audioSource != null && travelClip != null) audioSource.PlayOneShot(travelClip);
+            return;
+        }
         if (teleportation == null) { Say("No se puede viajar (falta TeleportationProvider)"); return; }
 
         if (boat != null && boat.IsBoarded) boat.Disembark();

@@ -95,6 +95,9 @@ Después de cada paso, dale a Play con Quest Link y comprueba lo que dice **"Có
 
 ---
 
+### 2b. Bolsillo para la llave
+*Isla Pirata > Llave y cofre > 4. Crear / actualizar bolsillo* (después de *Preparar llave*). En el juego: con la llave en la mano, acércala a tu cadera derecha (bolita verde) y suelta el grip: se queda guardada (`[BOLSILLO] Llave guardada`). Para sacarla, cógela de la cadera con el grip. Si se cae al agua vuelve sola.
+
 ## 3. Barco fantasma y maldición
 
 1. **Isla Pirata > Juego > Preparar barco fantasma**:

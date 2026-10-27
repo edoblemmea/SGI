@@ -194,7 +194,7 @@ public class ShakeablePalm : MonoBehaviour
         prevHand = hand.position;
         holding = true;
         XRHandInput.Haptic(handNode, 0.3f, 0.05f);
-        if (debugLogs) Debug.Log($"[PALMERA] Tronco agarrado. Quedan {hanging.Count} cocos. Sacude la mano a los lados.");
+        if (debugLogs) Debug.Log($"[PALMERA] Tronco de '{name}' agarrado. Quedan {hanging.Count} cocos. Sacude la mano a los lados. " + KeyStatus());
     }
 
     void OnRelease(SelectExitEventArgs a)
@@ -234,7 +234,7 @@ public class ShakeablePalm : MonoBehaviour
             if (debugLogs)
             {
                 logTimer += dt;
-                if (logTimer > 0.5f) { logTimer = 0f; Debug.Log($"[PALMERA] mano {speed:F2} m/s | sacudida {shake:F2}/{shakePerCoconut:F2} | cocos {hanging.Count}"); }
+                if (logTimer > 0.5f) { logTimer = 0f; Debug.Log($"[PALMERA] mano {speed:F2} m/s | sacudida {shake:F2}/{shakePerCoconut:F2} | cocos {hanging.Count}" + (keyHanging ? " | ESTA TIENE LA LLAVE" : "")); }
             }
         }
         else shake = Mathf.MoveTowards(shake, 0f, dt * 0.5f);
@@ -266,6 +266,13 @@ public class ShakeablePalm : MonoBehaviour
         c.playerHealth = playerHealth;
         SetHanging(c, true);
         hanging.Add(c);
+    }
+
+    string KeyStatus()
+    {
+        if (keyHanging) return $"*** ESTA PALMERA ESCONDE LA LLAVE: cae tras {Mathf.Max(0, dropKeyAfterCoconuts - dropped)} coco(s) mas ***";
+        if (hiddenKey != null) return "(la llave de esta palmera ya ha caido)";
+        return "(aqui no esta la llave)";
     }
 
     [ContextMenu("Sacudir ahora (prueba sin casco)")]
