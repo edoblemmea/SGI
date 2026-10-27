@@ -65,6 +65,13 @@ public class KeyChestSetupTool : EditorWindow
         rb.isKinematic = false;
         rb.useGravity = true;
         rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;   // que no atraviese el suelo al caer
+        // Un Mesh Collider concavo no funciona con un Rigidbody dinamico: Unity lo ignora y la llave atraviesa el suelo
+        foreach (var mc in key.GetComponentsInChildren<MeshCollider>(true).Where(m => !m.convex))
+        {
+            Undo.RecordObject(mc, "Llave");
+            mc.convex = true;
+            Debug.Log($"[LLAVE] Mesh Collider de '{mc.name}' puesto en Convex (si no, Unity lo ignora con un Rigidbody dinamico).");
+        }
         if (key.GetComponentInChildren<Collider>() == null) Undo.AddComponent<BoxCollider>(key);
         var grab = GetOrAddUndo<XRGrabInteractable>(key);
         Undo.RecordObject(grab, "Llave");
