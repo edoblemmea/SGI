@@ -164,5 +164,8 @@ public class GuidedTravel : MonoBehaviour, ITunnelingVignetteProvider
         if (vignette != null) vignette.EndTunnelingVignette(this);
     }
 
+    // Si se desactiva a mitad de viaje, devolver la locomocion (si no, el jugador se quedaria sin poder moverse)
+    void OnDisable() { if (IsTraveling) End(); }
+
     static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
 }

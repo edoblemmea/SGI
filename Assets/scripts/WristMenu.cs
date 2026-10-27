@@ -72,10 +72,11 @@ public class WristMenu : MonoBehaviour
     float volume = 1f, restartTimer, refreshTimer;
     bool prevY;
 
-    const string Prefix = "SGI.Menu.";
+    const string Prefix = "SGI.Menu2.";   // "2": se ignoran las opciones guardadas por la version anterior
 
     void Start()
     {
+        ReadSceneDefaults();   // sin opciones guardadas, el menu respeta lo que ya habia en el XR Origin
         Load();
         Bind(moveButton, () => { smoothMove = !smoothMove; Changed("Movimiento " + (smoothMove ? "continuo" : "teletransporte")); });
         Bind(turnButton, () => { smoothTurnOn = !smoothTurnOn; Changed("Giro " + (smoothTurnOn ? "suave" : "por saltos")); });
@@ -149,6 +150,26 @@ public class WristMenu : MonoBehaviour
         Save();
         Refresh();
         if (debugLogs) Debug.Log("[MENU] " + what);
+    }
+
+    // Valores de partida = como esta configurado el XR Origin en la escena (el rig de XRI anda con el joystick izquierdo)
+    void ReadSceneDefaults()
+    {
+        if (leftHandManager != null) smoothMove = leftHandManager.smoothMotionEnabled;
+        if (rightHandManager != null) smoothTurnOn = rightHandManager.smoothTurnEnabled;
+        if (snapTurn != null) snapIndex = Closest(snapAngles, snapTurn.turnAmount);
+        if (moveProvider != null) speedIndex = Closest(moveSpeeds, moveProvider.moveSpeed);
+        if (vignette != null) vignetteOn = vignette.gameObject.activeSelf;
+        if (map != null) glideTravel = map.glideTravel;
+        volume = AudioListener.volume;
+        if (debugLogs) Debug.Log($"[MENU] Valores de la escena: movimiento {(smoothMove ? "continuo" : "teletransporte")}, giro {(smoothTurnOn ? "suave" : "por saltos")}");
+    }
+
+    static int Closest(float[] values, float v)
+    {
+        int best = 0;
+        for (int i = 1; i < values.Length; i++) if (Mathf.Abs(values[i] - v) < Mathf.Abs(values[best] - v)) best = i;
+        return best;
     }
 
     // ------------------------------------------------------------------ aplicar las opciones
