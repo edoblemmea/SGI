@@ -18,9 +18,9 @@
 - [x] **Isla Pirata > Crear escena propia** → `Assets/Scenes/IslaPirata.unity`.
 
 ### 2. Barca, remos y teletransporte
-- [ ] XR Origin sobre las tablas del muelle; **Start On Board** desmarcado en Boat Rowing.
-- [ ] **Isla Pirata > Barca**: *Diagnóstico*, luego **2. Preparar barca y remos**, **3. Arreglar teletransporte**, y *Diagnóstico* otra vez hasta `TODO CORRECTO`.
-- [ ] `BoatDoctor`: su componente tiene que estar en `OldWoodenRowboat_Complete` (ahora está en un hijo). Si no se usa, desactívalo.
+- [x] XR Origin sobre las tablas del muelle; **Start On Board** desmarcado en Boat Rowing.
+- [x] **Isla Pirata > Barca**: *Diagnóstico*, luego **2. Preparar barca y remos** (también quita el *Static* del prefab de la barca), **3. Arreglar teletransporte**, y *Diagnóstico* otra vez hasta `TODO CORRECTO`.
+- [x] `BoatDoctor`: se pasa solo al objeto del Rigidbody. Cuando ya no haga falta, desactívalo (crea postes rojos y empuja la barca al empezar).
 
 ### 3. NavMesh y arañas (salen de las rocas)
 - [ ] **Isla Pirata > Aranas**: NavMesh (**Bake**) y prefab Arana.
@@ -43,6 +43,7 @@
 ### 6. Barco fantasma, esqueletos y maldición
 - [ ] **Isla Pirata > Juego**: *Crear / actualizar GameManager* y, en la sección 2, **Preparar barco fantasma**. Esto crea el ancla de la cubierta y la zona de llegada; los objetivos quedan `llave` → `barco` → `cofre`.
 - [ ] **Isla Pirata > Barca > 3. Arreglar teletransporte** otra vez (para la nueva ancla de la cubierta) y luego **Diagnóstico**.
+- [ ] **Isla Pirata > Escala de cuerda** → *Crear / actualizar escala*: para subir trepando desde la barca. Comprueba que `Abajo` queda a ras del agua y `Punto cubierta` sobre la cubierta.
 - [ ] Pulsa **Bake** en `NavMesh`: la cubierta del barco fantasma tiene que salir azul.
 - [ ] **Isla Pirata > Esqueletos piratas**:
   1. *Crear / actualizar prefab Esqueleto*. Arrastra uno a la escena, dale a Play y haz clic derecho en SkeletonCrumble > **Desmoronar ahora**: tiene que caer como un muñeco y hundirse.
@@ -53,6 +54,10 @@
   - el texto del cofre aparece si intentas abrirlo de día;
   - en `DiaNoche`, clic derecho > **Hacer de noche**: los tótems brillan más y la cerradura se ilumina;
   - en ChestLock, clic derecho > **Abrir ahora**: los tótems se apagan, los esqueletos se desmoronan y salen `[MALDICION]` y `[JUEGO] Objetivo 'cofre'`.
+
+### 6b. Menú de la muñeca
+- [ ] **Isla Pirata > Menu muneca** → *Crear / actualizar menú de la muñeca*. Hazlo **después** de la maldición (usa `DiaNoche`). En la Console, `[MENU] Menu creado...` sin ningún FALTA. Ctrl+S.
+- [ ] Prueba con el casco: **Y** abre el menú; con el rayo derecho cambia el movimiento a continuo y anda con el joystick izquierdo; cambia el giro; quita la viñeta; cambia la hora; baja el volumen.
 
 ### 7. Telescopio
 - [ ] **Isla Pirata > Telescopio**: *Crear prefab*. En el prefab, mueve el slider **Extension** de 0 a 1: los tramos tienen que salir hacia el ocular.
@@ -81,14 +86,14 @@
   - en *Play Mode OpenXR Runtime*, elegir **System Default**.
 
 ### 10. Git
-- [ ] Resolver el conflicto de `Assets/XR/Settings/OpenXRPackageSettings.asset`: quedarse con el nuevo `OpenXR Package Settings.asset`, que es el que usa Unity, y borrar el antiguo (roto). Claude Code puede hacerlo.
+- [x] Resolver el conflicto de `Assets/XR/Settings/OpenXRPackageSettings.asset`: quedarse con el nuevo `OpenXR Package Settings.asset`, que es el que usa Unity, y borrar el antiguo (roto). Claude Code puede hacerlo.
 - [ ] Commit y push. Tu compañera hace *pull* y abre el proyecto con **Unity 6000.5.0f1**.
 
 ---
 
 ## B. Prueba con el casco (en el PC de tu compañera)
 - [ ] Lo básico: mandos visibles, andar, girar, teletransporte.
-- [ ] Barca: teletransporte del muelle a la barca, coger los remos con el grip, remar y volver.
+- [x] Barca: teletransporte del muelle a la barca, coger los remos con el grip, remar y volver (probado el 27/10).
 - [ ] Palmeras: sacudir, que caigan cocos y la llave.
 - [ ] Catalejo: alargarlo con dos manos, mirar por el ocular y ver el barco → `¡Barco a la vista!`.
 - [ ] Barco fantasma: llegar remando (`barco`), teletransportarse a la cubierta, luchar contra los esqueletos.
@@ -98,7 +103,7 @@
 
 ## C. Código pendiente (pedírselo a Claude Code), por prioridad
 1. ~~Mapa / carta~~: **hecho** (`TreasureMap`, `MapMarker`, *Isla Pirata > Carta*), falta probarlo.
-2. **Menú de la muñeca** (requisito de **configuración y control**):
+2. ~~**Menú de la muñeca**~~: **hecho** (`WristMenu`, *Isla Pirata > Menu muneca*), falta montarlo y probarlo. Era:
    - tipo de movimiento: teletransporte / continuo;
    - giro por saltos / suave;
    - viñeta de confort;

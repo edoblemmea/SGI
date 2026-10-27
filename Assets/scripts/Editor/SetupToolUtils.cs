@@ -72,6 +72,21 @@ public static class SetupToolUtils
         return b;
     }
 
+    /// Quita "Static" de un objeto y sus hijos. Los modelos de los assets (barca, Tree_a...) vienen Static:
+    /// con Static Batching su malla se queda congelada aunque el objeto se mueva o gire. Devuelve cuantos cambio.
+    public static int ClearStatic(GameObject go)
+    {
+        int n = 0;
+        foreach (var t in go.GetComponentsInChildren<Transform>(true))
+        {
+            if (GameObjectUtility.GetStaticEditorFlags(t.gameObject) == 0) continue;
+            Undo.RecordObject(t.gameObject, "Quitar Static");
+            GameObjectUtility.SetStaticEditorFlags(t.gameObject, 0);
+            n++;
+        }
+        return n;
+    }
+
     public static T GetOrAdd<T>(GameObject go) where T : Component
     {
         var c = go.GetComponent<T>();

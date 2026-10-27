@@ -264,7 +264,13 @@ Scripts:
   - se nada a partir de 1,3 m de profundidad (raycast al suelo desde la superficie del agua `// DEMO:`);
   - se bracea con el grip y hay flotación;
   - no actúa a bordo, porque el CC está apagado.
-- **Escalada:** sin código, con `Climb Interactable` de XRI.
+- **Escala de cuerda (`RopeLadder`, *Isla Pirata > Escala de cuerda*):** en el costado del barco pirata. Grip cerca de la escala y tirar hacia abajo (manos leídas del casco con `XRHandInput`, sin Climb Provider, porque a bordo está desactivado). Al agarrarla desde la barca hace `Disembark`; al asomar la cabeza por encima de `top` te pone en `deckPoint`; si sueltas abajo vuelves a la barca (`Board`).
+- **Escalada genérica:** sin código, con `Climb Interactable` de XRI.
+
+### 5.5b Menú de la muñeca (`WristMenu`, *Isla Pirata > Menu muneca*)
+- Canvas World Space hijo del `Left Controller`; **Y** abre/cierra; se pulsa con el rayo derecho.
+- Movimiento: `ControllerInputActionManager.smoothMotionEnabled` **solo del mando izquierdo** (el derecho sigue teletransportando: hace falta para la barca). Giro: `smoothTurnEnabled` de los dos. También grados del `SnapTurnProvider`, `moveSpeed` del Move, viñeta (`TunnelingVignetteController`, se activa/desactiva el objeto), hora (`DayNightCycle.ToggleDayNight`, se puede desactivar con `allowTimeChange`), `AudioListener.volume` y reiniciar (`GameManager.Restart`, doble pulsación).
+- Opciones guardadas en `PlayerPrefs` (`SGI.Menu.*`).
 
 ### 5.6 Mundo y objetivo
 - **`GameManager`** (uno por escena, `GameManager.Instance`):
@@ -297,6 +303,7 @@ Scripts:
 | Enemigos que no se mueven: `NO esta sobre el NavMesh` | NavMesh sin hornear o AI Navigation sin instalar | *Isla Pirata > Aranas*, paso 1, y **Bake** |
 | Los piratas se deslizan o se van solos | El asset trae `applyRootMotion` y un componente `Animation` legacy | El prefab `Pirata` los quita |
 | Se rema (`[MANO] remada` > 0), `BoatDoctor` dice que avanza, pero la barca que ves no se mueve y un remo no sigue a la mano | El prefab del asset Boats marca barca y remos como **Static** (incluido Batching Static): la malla se queda congelada | *Isla Pirata > Barca > 2* quita el Static; el Diagnóstico y `BoatDoctor` lo avisan |
+| La palmera no se balancea al sacudirla | `Tree_a`/`Tree_b` del asset Island también vienen **Static** | *Palmeras sacudibles > 3* |
 | `CommonUsages is an ambiguous reference` | Dos namespaces con `CommonUsages` | `UnityEngine.XR.CommonUsages` |
 | Hay controllers en gris en Play, o `Current Tracking Origin: Unknown` | Modo manos/sin sesión XR | Quest Link como runtime OpenXR activo; revisar `XR Input Modality Manager` |
 
@@ -311,7 +318,7 @@ Scripts:
    | Llave, cofre y palmeras | `[LLAVE]`, `[COFRE]`, `[PALMERA]` |
    | Combate | `[VIDA]`, `[JUGADOR]`, `[ENEMIGO]`, `[COCO]`, `[ESPADA]` |
    | Juego y objetivos | `[JUEGO]`, `[ZONA]` |
-   | Movimiento y mundo | `[NADAR]`, `[LIANA]`, `[DIANOCHE]` |
+   | Movimiento y mundo | `[NADAR]`, `[ESCALA]`, `[DIANOCHE]`, `[MENU]` |
    | Herramientas del menú | `[ARANAS]`, `[PIRATAS]`, `[COCOS]`, `[PALMERAS]`, `[HERRAMIENTA]` |
 
 2. **Window > Analysis > Input Debugger**: ver `grip` en vivo del mando.
@@ -340,7 +347,7 @@ Lista de tareas concreta para la siguiente sesión, ideas de mejora y lo que fal
 | 5 | Espada + piratas | Piratas hechos; **falta modelo de espada** y montarla |
 | 6 | Maldición: reloj de arena, cofre de noche, tótems, esqueletos que se desmoronan | Código y herramientas hechos; falta montar y probar |
 | 6b | Carta (escalado, wayfinding, objetivos, viaje rápido) | Código y herramienta hechos; falta montar y probar |
-| 6c | Menú de la muñeca (configuración de la navegación y control) | Pendiente: requisito de la práctica |
+| 6c | Menú de la muñeca (configuración de la navegación y control) | Código y herramienta hechos; falta montar y probar |
 | 7 | Día/noche y `GameManager` (objetivo y final) | Código hecho; falta montar la UI |
 | 8a | Escena propia copiando la demo (*Crear escena propia*) | Herramienta hecha; falta pulsarla |
 | 8b | **Reconstruir la escena desde cero (fuera de la demo)** | Pendiente, al final |

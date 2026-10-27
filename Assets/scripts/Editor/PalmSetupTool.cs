@@ -48,6 +48,18 @@ public class PalmSetupTool : EditorWindow
         scaleRange = EditorGUILayout.Vector2Field("Escala min / max", scaleRange);
         using (new EditorGUI.DisabledScope(AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null))
             if (GUILayout.Button("Colocar palmeras")) Place();
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("3. Arreglar las palmeras ya colocadas", EditorStyles.boldLabel);
+        if (GUILayout.Button("Quitar 'Static' de las palmeras de la escena")) FixStatic();
+    }
+
+    void FixStatic()
+    {
+        int n = 0, palms = 0;
+        foreach (var p in FindObjectsByType<ShakeablePalm>(FindObjectsInactive.Include)) { n += SetupToolUtils.ClearStatic(p.gameObject); palms++; }
+        if (n > 0) UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+        Debug.Log($"[PALMERAS] {palms} palmeras revisadas: quitado 'Static' de {n} objetos. Ahora el tronco se balancea al sacudirlo. Guarda (Ctrl+S).");
     }
 
     void CreatePrefab()
@@ -62,6 +74,7 @@ public class PalmSetupTool : EditorWindow
             visual.name = "Modelo";
             visual.transform.localPosition = Vector3.zero;
             visual.transform.localRotation = Quaternion.identity;
+            SetupToolUtils.ClearStatic(visual);   // DEMO: Tree_a/Tree_b vienen Static y el tronco no se balancearia
 
             Bounds b = SetupToolUtils.RenderBounds(visual);
 

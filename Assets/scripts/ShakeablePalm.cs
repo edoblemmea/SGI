@@ -209,6 +209,14 @@ public class ShakeablePalm : MonoBehaviour
         hanging.Add(c);
     }
 
+    [ContextMenu("Sacudir ahora (prueba sin casco)")]
+    void ShakeFromInspector()
+    {
+        if (!Application.isPlaying) { Debug.Log("[PALMERA] Dale a Play primero."); return; }
+        swayVel += new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized * 40f;
+        DropCoconut();
+    }
+
     void DropCoconut()
     {
         hanging.RemoveAll(c => c == null);

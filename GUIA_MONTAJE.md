@@ -157,6 +157,9 @@ Después de cada paso, dale a Play con Quest Link y comprueba lo que dice **"Có
 Menú **Isla Pirata > Palmeras sacudibles**. Hace falta haber creado antes el prefab Coco.
 1. **Crear prefab**: crea `Assets/Prefabs/PalmeraSacudible.prefab` con el modelo `Tree_a` (o `Tree_b`) del asset Island y cocos en la copa.
 2. **Colocar palmeras**: las pone sobre el terreno, alrededor de la vista.
+3. **Quitar 'Static' de las palmeras de la escena**: `Tree_a`/`Tree_b` vienen marcados *Static* y, si no, el tronco no se balancea. Las palmeras creadas antes del 27/10 lo necesitan; las nuevas ya salen bien.
+
+**Prueba sin casco:** en Play, selecciona una palmera > clic derecho en *Shakeable Palm* > **Sacudir ahora (prueba sin casco)**: se balancea y cae un coco (o la llave, si la esconde).
 
 Después vuelve a hornear el NavMesh, para que arañas y piratas esquiven los troncos nuevos.
 
@@ -184,7 +187,9 @@ Los enemigos del barco son los **esqueletos** (apartado 3).
 
 En aguas poco profundas se camina; a partir de 1.3 m se nada. Se bracea con el grip y tirando hacia atrás. Sale `[NADAR] Al agua ...`.
 
-**Escalar:** no hace falta código. A la roca o pared ponle un collider y un **Climb Interactable** (XRI). Comprueba que el `Climb Provider` de `Locomotion` está activo.
+**Escala de cuerda al barco pirata:** menú **Isla Pirata > Escala de cuerda** → *Crear / actualizar escala*. La cuelga en el costado del barco pirata que mira hacia la barca de remos (objeto `Escala de cuerda`, con `Abajo`, `Arriba` y `Punto cubierta`; muévelos si hace falta). En el juego: rema hasta la escala, acerca una mano, aprieta el **grip** y tira hacia **abajo**, alternando manos. Al asomar la cabeza por la borda apareces en la cubierta (`[ESCALA] ¡Arriba!`). Para volver, teletranspórtate al ancla de la barca.
+
+**Escalar otras cosas:** no hace falta código. A la roca o pared ponle un collider y un **Climb Interactable** (XRI). Comprueba que el `Climb Provider` de `Locomotion` está activo.
 
 ---
 
@@ -197,9 +202,16 @@ Para que salgan más arañas de noche: en `On Night Started` activa un grupo de 
 
 ---
 
-## 9. Confort VR
+## 9. Confort VR y menú de la muñeca
 
-En `XR Origin > Locomotion > Turn`, usa **Snap Turn** por defecto. Añade el prefab **Tunneling Vignette** de los Starter Assets como hijo de `Main Camera` y asígnalo a los providers de Move y Turn.
+Menú **Isla Pirata > Menu muneca** → *Crear / actualizar menú de la muñeca*:
+- añade la **viñeta** (`TunnelingVignette` de los Starter Assets) bajo `Main Camera`, conectada a Move, giro suave y teletransporte;
+- crea `Menu Muneca` (con `WristMenu`) encima del `Left Controller`;
+- crea el EventSystem con XR UI Input Module si no existe.
+
+**En el juego:** botón **Y** = abrir/cerrar. Se pulsa con el rayo del mando derecho y el gatillo. Opciones: movimiento (teletransporte / continuo en el joystick izquierdo; el derecho siempre teletransporta para la barca), giro (saltos / suave), grados del salto, velocidad, viñeta, hora (día/noche), volumen y reiniciar (pide confirmación). Se guardan en el dispositivo.
+
+**Cómo comprobarlo:** `[MENU] Listo...` al empezar (sin ningún FALTA) y `[MENU] Movimiento continuo`, etc., al pulsar. Sin casco: clic derecho en *Wrist Menu* > **Abrir / cerrar**.
 
 ---
 

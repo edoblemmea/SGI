@@ -38,6 +38,13 @@ public static class XRHandInput
         return dev.isValid && dev.TryGetFeatureValue(UnityEngine.XR.CommonUsages.primaryButton, out bool b) && b;
     }
 
+    /// Boton B (mando derecho) / Y (mando izquierdo)
+    public static bool SecondaryButton(XRNode node)
+    {
+        var dev = InputDevices.GetDeviceAtXRNode(node);
+        return dev.isValid && dev.TryGetFeatureValue(UnityEngine.XR.CommonUsages.secondaryButton, out bool b) && b;
+    }
+
     public static void Haptic(XRNode node, float amplitude, float duration)
     {
         var dev = InputDevices.GetDeviceAtXRNode(node);
