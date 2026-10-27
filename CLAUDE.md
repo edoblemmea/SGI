@@ -296,6 +296,7 @@ Scripts:
 | Al llegar al muelle los pies quedan dentro de las tablas | `anclaMuelle` estaba en el pivote del Dock, por debajo de la superficie | Subir el ancla a ras de suelo (lo hace la herramienta) |
 | Enemigos que no se mueven: `NO esta sobre el NavMesh` | NavMesh sin hornear o AI Navigation sin instalar | *Isla Pirata > Aranas*, paso 1, y **Bake** |
 | Los piratas se deslizan o se van solos | El asset trae `applyRootMotion` y un componente `Animation` legacy | El prefab `Pirata` los quita |
+| Se rema (`[MANO] remada` > 0), `BoatDoctor` dice que avanza, pero la barca que ves no se mueve y un remo no sigue a la mano | El prefab del asset Boats marca barca y remos como **Static** (incluido Batching Static): la malla se queda congelada | *Isla Pirata > Barca > 2* quita el Static; el Diagnóstico y `BoatDoctor` lo avisan |
 | `CommonUsages is an ambiguous reference` | Dos namespaces con `CommonUsages` | `UnityEngine.XR.CommonUsages` |
 | Hay controllers en gris en Play, o `Current Tracking Origin: Unknown` | Modo manos/sin sesión XR | Quest Link como runtime OpenXR activo; revisar `XR Input Modality Manager` |
 

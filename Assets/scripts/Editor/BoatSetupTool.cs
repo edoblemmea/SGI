@@ -130,6 +130,9 @@ public class BoatSetupTool : EditorWindow
         if (boat.disableWhileOnBoard == null || boat.disableWhileOnBoard.Length == 0) Bad("BoatRowing: 'Disable While On Board' vacio -> te moverias dentro de la barca");
         else Ok($"Desactiva a bordo: {string.Join(", ", boat.disableWhileOnBoard.Where(b => b != null).Select(b => b.GetType().Name))}");
         if (boat.startOnBoard) sb.AppendLine("  [!] Start On Board marcado: empiezas dentro de la barca (solo para pruebas)");
+        var statics = boat.GetComponentsInChildren<Transform>(true).Where(t => GameObjectUtility.GetStaticEditorFlags(t.gameObject) != 0).Select(t => t.name).ToArray();
+        if (statics.Length > 0) Bad($"Objetos marcados Static en la barca: {string.Join(", ", statics)} -> la malla no se mueve aunque el Rigidbody si. Pulsa '2. Preparar barca y remos'");
+        else Ok("Ningun objeto de la barca es Static");
 
         sb.AppendLine("REMO");
         var rowers = boat.GetComponents<BoatHandRowing>();
@@ -352,10 +355,27 @@ public class BoatSetupTool : EditorWindow
 
         SetupOar(leftPaddle, XRNode.LeftHand, leftCtrl, rightCtrl, leftGrip, rightGrip);
         SetupOar(rightPaddle, XRNode.RightHand, leftCtrl, rightCtrl, leftGrip, rightGrip);
+        ClearStatic();
 
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(boat.gameObject.scene);
         Debug.Log($"[BARCA] Barca preparada. BoatRowing desactiva a bordo: {string.Join(", ", boat.disableWhileOnBoard.Select(b => b.GetType().Name))}. " +
                   "BoatHandRowing con 'Require Oar Grab'. Remos agarrables. Guarda (Ctrl+S).");
+    }
+
+    // DEMO: el prefab del asset Boats marca la barca y los remos como Static (todo, incluido Batching Static).
+    // Con Static Batching la malla se "congela" en el mundo: el Rigidbody avanza pero la barca que ves no, y un remo no gira.
+    void ClearStatic()
+    {
+        int n = 0;
+        foreach (var t in boat.GetComponentsInChildren<Transform>(true))
+        {
+            if (GameObjectUtility.GetStaticEditorFlags(t.gameObject) == 0) continue;
+            Undo.RecordObject(t.gameObject, "Quitar Static");
+            GameObjectUtility.SetStaticEditorFlags(t.gameObject, 0);
+            n++;
+        }
+        Debug.Log(n > 0 ? $"[BARCA] Quitado 'Static' de {n} objetos de la barca (la malla y los remos ya pueden moverse)."
+                        : "[BARCA] La barca no tenia objetos Static (bien).");
     }
 
     static UnityEngine.InputSystem.InputActionReference FindAction(string name)
@@ -383,6 +403,7 @@ public class BoatSetupTool : EditorWindow
         oar.rightHand = rightCtrl;
         oar.leftGrip = leftGrip;
         oar.rightGrip = rightGrip;
+        if (oar.grabRadius < 0.3f) oar.grabRadius = 0.3f;
 
         if (oar.handle == null)
         {

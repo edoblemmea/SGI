@@ -56,7 +56,7 @@ public class Oar : MonoBehaviour
     BoatRowing boat;
     Oar pair;                       // el otro remo de la barca
     Renderer marker;
-    bool prevGripL, prevGripR, near;
+    bool prevGripL, prevGripR, near, nearL, nearR;
     float logTimer, distL = -1f, distR = -1f;
     static Oar heldByLeft, heldByRight;
 
@@ -109,6 +109,19 @@ public class Oar : MonoBehaviour
             transform.localRotation = Quaternion.Slerp(transform.localRotation, restLocal, returnSpeed * Time.deltaTime);
 
         UpdateMarker();
+        if (debugLogs && IsHeld)
+        {
+            // Para saber si el remo gira de verdad (si el angulo cambia pero no lo ves moverse, la malla esta congelada: Static)
+            logTimer += Time.deltaTime;
+            if (logTimer > 1.5f)
+            {
+                logTimer = 0f;
+                bool okHand = HandPosition(HeldBy, out Vector3 h);
+                Debug.Log($"[REMO] '{name}' cogido con la mano {(HeldBy == XRNode.LeftHand ? "izq" : "der")} | " +
+                          (okHand ? $"mano a {Vector3.Distance(h, handle.position):F2} m de la empunadura" : "NO llega la posicion de esa mano") +
+                          $" | giro respecto al reposo {Quaternion.Angle(restLocal, transform.localRotation):F0} grados | static={gameObject.isStatic}");
+            }
+        }
         if (debugLogs && !IsHeld)
         {
             logTimer += Time.deltaTime;
@@ -138,9 +151,12 @@ public class Oar : MonoBehaviour
         float dist = Vector3.Distance(hand, handle.position);
         if (node == XRNode.LeftHand) distL = dist; else distR = dist;
 
+        // Cada mano por separado (antes la mano lejana apagaba el aviso de la cercana)
         bool isNear = dist < grabRadius;
-        if (isNear && !near) XRHandInput.Haptic(node, 0.15f, 0.03f);   // "estas tocando la empunadura"
-        near = isNear;
+        bool wasNear = node == XRNode.LeftHand ? nearL : nearR;
+        if (isNear && !wasNear) XRHandInput.Haptic(node, 0.15f, 0.03f);   // "estas tocando la empunadura"
+        if (node == XRNode.LeftHand) nearL = isNear; else nearR = isNear;
+        near = nearL || nearR;
 
         if (justPressed && isNear) GrabBoth();
     }

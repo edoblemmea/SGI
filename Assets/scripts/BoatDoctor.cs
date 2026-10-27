@@ -80,6 +80,10 @@ public class BoatDoctor : MonoBehaviour
         // 3. Jerarquia
         Debug.Log($"[DOCTOR] 3/7 JERARQUIA: {Ruta(transform)}  | mallas visibles bajo este objeto: {renderers.Length}" +
                   (renderers.Length == 0 ? "  <-- PROBLEMA: la malla visible NO es hija de este Rigidbody; se mueve el objeto pero no lo que ves" : ""));
+        foreach (var t in GetComponentsInChildren<Transform>(true))
+            if (t.gameObject.isStatic)
+                Debug.LogWarning($"[DOCTOR] 3/7 PROBLEMA: '{t.name}' esta marcado STATIC: con Static Batching su malla no se mueve aunque el Rigidbody si. " +
+                                 "Usa Isla Pirata > Barca > 2. Preparar barca y remos (lo quita).");
 
         // 4. Scripts y animators
         var sb = new StringBuilder("[DOCTOR] 4/7 SCRIPTS del asset (en este objeto, hijos y padres):\n");
