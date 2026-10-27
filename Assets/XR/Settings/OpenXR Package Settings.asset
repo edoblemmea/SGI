@@ -378,8 +378,8 @@ MonoBehaviour:
   - {fileID: -2489689004840954759}
   - {fileID: -7036285211026203049}
   - {fileID: -5600633965343552656}
-  - {fileID: -347729701929539414}
-  - {fileID: -9102258163549268883}
+  - {fileID: 7115563409406554892}
+  - {fileID: 5033732423506932813}
   - {fileID: 7171216522906504760}
   - {fileID: -8410705630802782157}
   - {fileID: 8672454141377492094}
@@ -390,7 +390,7 @@ MonoBehaviour:
   - {fileID: -3373219261772072000}
   - {fileID: 6349700567198385090}
   - {fileID: -3533147229839102185}
-  - {fileID: -8411432964460440233}
+  - {fileID: 2859412776734366396}
   - {fileID: 7634954933411441726}
   - {fileID: -751689653726633281}
   - {fileID: 8680220053463603318}
@@ -1541,6 +1541,28 @@ MonoBehaviour:
   targetOpenXRApiVersion: 
   required: 0
   customRuntimeLoaderName: 
+--- !u!114 &-118142283174602957
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c36843bac48b29469f79baf3c98f9b6, type: 3}
+  m_Name: AndroidXRHandMeshData Standalone
+  m_EditorClassIdentifier: Unity.XR.AndroidOpenXR::UnityEngine.XR.OpenXR.Features.Android.AndroidXRHandMeshData
+  m_enabled: 0
+  nameUi: 'Android XR: Hand Mesh Data'
+  version: 0.1.0
+  featureIdInternal: com.unity.openxr.feature.androidxr-hand-mesh-data
+  openxrExtensionStrings: XR_ANDROID_hand_mesh
+  company: Unity Technologies
+  priority: 0
+  targetOpenXRApiVersion: 
+  required: 0
+  customRuntimeLoaderName: 
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1903,7 +1925,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6c36843bac48b29469f79baf3c98f9b6, type: 3}
-  m_Name: AndroidXRHandMeshData Standalone
+  m_Name: AndroidXRHandMeshData Android
   m_EditorClassIdentifier: Unity.XR.AndroidOpenXR::UnityEngine.XR.OpenXR.Features.Android.AndroidXRHandMeshData
   m_enabled: 0
   nameUi: 'Android XR: Hand Mesh Data'
@@ -2173,7 +2195,7 @@ MonoBehaviour:
   - {fileID: 1481584487670622428}
   - {fileID: 182087112835064994}
   - {fileID: -5079141862048241452}
-  - {fileID: 2859412776734366396}
+  - {fileID: -118142283174602957}
   - {fileID: -3393104421102496959}
   - {fileID: 3474504210907131300}
   - {fileID: 3593215994097251680}
