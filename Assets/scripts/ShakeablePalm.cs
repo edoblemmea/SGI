@@ -37,6 +37,9 @@ public class ShakeablePalm : MonoBehaviour
     public Transform hiddenKey;
     [Tooltip("La llave cae despues de soltar este numero de cocos (0 = con la primera sacudida buena)")]
     public int dropKeyAfterCoconuts = 2;
+    [Tooltip("Sonido al soltarse la llave y al tocar el suelo. Si se deja vacio se genera un 'cling' metalico")]
+    public AudioClip keyClip;
+    [Range(0f, 1f)] public float keyVolume = 0.9f;
 
     [Header("Sacudida")]
     [Tooltip("Velocidad minima de la mano (m/s) para que cuente como sacudida")]
@@ -117,7 +120,63 @@ public class ShakeablePalm : MonoBehaviour
         var rb = hiddenKey.GetComponent<Rigidbody>();
         if (rb != null) rb.linearVelocity = Vector3.ProjectOnPlane(Random.onUnitSphere, Vector3.up).normalized * 0.5f;
         XRHandInput.Haptic(handNode, 1f, 0.3f);
+        PlayCling(hiddenKey.position, 1f);
+        StartCoroutine(ClingOnLanding(rb));
         if (debugLogs) Debug.Log($"[PALMERA] ¡Ha caido la llave de '{name}'! Recogela y llevala al cofre");
+    }
+
+    // Segundo "cling" (mas suave) cuando la llave deja de caer = ha tocado el suelo
+    System.Collections.IEnumerator ClingOnLanding(Rigidbody rb)
+    {
+        if (rb == null) yield break;
+        bool falling = false;
+        for (float t = 0f; t < 6f; t += Time.deltaTime)
+        {
+            if (rb.linearVelocity.y < -1f) falling = true;
+            else if (falling && rb.linearVelocity.y > -0.2f)
+            {
+                PlayCling(rb.position, 0.6f);
+                if (debugLogs) Debug.Log($"[PALMERA] La llave ha llegado al suelo en {rb.position}");
+                yield break;
+            }
+            yield return null;
+        }
+    }
+
+    static AudioClip generatedCling;
+
+    void PlayCling(Vector3 pos, float volume)
+    {
+        var clip = keyClip != null ? keyClip : (generatedCling != null ? generatedCling : (generatedCling = MakeCling()));
+        var go = new GameObject("Sonido llave");
+        go.transform.position = pos;
+        var src = go.AddComponent<AudioSource>();
+        src.clip = clip;
+        src.volume = keyVolume * volume;
+        src.spatialBlend = 0.6f;   // se oye de donde cae, pero tambien desde lejos
+        src.minDistance = 4f;
+        src.maxDistance = 40f;
+        src.Play();
+        Destroy(go, clip.length + 0.1f);
+    }
+
+    // "Cling" metalico: unos tonos agudos no armonicos que se apagan rapido (como una llave contra una piedra)
+    static AudioClip MakeCling()
+    {
+        const int rate = 44100;
+        float length = 0.7f;
+        var data = new float[(int)(rate * length)];
+        float[] freqs = { 2637f, 3951f, 5274f, 6890f };
+        float[] amps = { 0.5f, 0.3f, 0.2f, 0.12f };
+        for (int i = 0; i < data.Length; i++)
+        {
+            float t = i / (float)rate, s = 0f;
+            for (int k = 0; k < freqs.Length; k++) s += amps[k] * Mathf.Sin(2f * Mathf.PI * freqs[k] * t) * Mathf.Exp(-t * (6f + k * 3f));
+            data[i] = s * Mathf.Clamp01(t * 2000f);   // ataque corto, sin chasquido
+        }
+        var clip = AudioClip.Create("Cling", data.Length, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
     }
 
     void OnGrab(SelectEnterEventArgs a)
