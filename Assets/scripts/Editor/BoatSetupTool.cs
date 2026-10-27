@@ -236,20 +236,52 @@ public class BoatSetupTool : EditorWindow
         rower.head = origin.Camera != null ? origin.Camera.transform : null;
         rower.requireOarGrab = true;
 
-        SetupOar(leftPaddle, XRNode.LeftHand);
-        SetupOar(rightPaddle, XRNode.RightHand);
+        // Manos y grip: los objetos Left/Right Controller (lo que se ve en el casco) y las acciones de XRI
+        var all = origin.GetComponentsInChildren<Transform>(true);
+        Transform leftCtrl = all.FirstOrDefault(t => t.name.ToLower().Contains("left") && t.name.ToLower().Contains("controller"));
+        Transform rightCtrl = all.FirstOrDefault(t => t.name.ToLower().Contains("right") && t.name.ToLower().Contains("controller"));
+        var leftGrip = rower.leftGrip != null ? rower.leftGrip : FindAction("XRI Left Interaction/Select Value");
+        var rightGrip = rower.rightGrip != null ? rower.rightGrip : FindAction("XRI Right Interaction/Select Value");
+        rower.leftHandFallback = leftCtrl;
+        rower.rightHandFallback = rightCtrl;
+        rower.leftGrip = leftGrip;
+        rower.rightGrip = rightGrip;
+        Debug.Log($"[BARCA] Manos: {(leftCtrl != null ? leftCtrl.name : "NO ENCONTRADA")} / {(rightCtrl != null ? rightCtrl.name : "NO ENCONTRADA")}. " +
+                  $"Grip: {(leftGrip != null ? leftGrip.name : "-")} / {(rightGrip != null ? rightGrip.name : "-")}");
+
+        SetupOar(leftPaddle, XRNode.LeftHand, leftCtrl, rightCtrl, leftGrip, rightGrip);
+        SetupOar(rightPaddle, XRNode.RightHand, leftCtrl, rightCtrl, leftGrip, rightGrip);
 
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(boat.gameObject.scene);
         Debug.Log($"[BARCA] Barca preparada. BoatRowing desactiva a bordo: {string.Join(", ", boat.disableWhileOnBoard.Select(b => b.GetType().Name))}. " +
                   "BoatHandRowing con 'Require Oar Grab'. Remos agarrables. Guarda (Ctrl+S).");
     }
 
-    void SetupOar(Transform paddle, XRNode hand)
+    static UnityEngine.InputSystem.InputActionReference FindAction(string name)
+    {
+        // Acciones de los Starter Assets de XRI (solo en el editor)
+        foreach (var guid in AssetDatabase.FindAssets("XRI Default Input Actions"))
+        {
+            var r = AssetDatabase.LoadAllAssetsAtPath(AssetDatabase.GUIDToAssetPath(guid))
+                .OfType<UnityEngine.InputSystem.InputActionReference>()
+                .FirstOrDefault(a => a.name == name);
+            if (r != null) return r;
+        }
+        Debug.LogWarning($"[BARCA] No encuentro la accion '{name}' en los Starter Assets: el grip se leera solo del casco.");
+        return null;
+    }
+
+    void SetupOar(Transform paddle, XRNode hand, Transform leftCtrl, Transform rightCtrl,
+                  UnityEngine.InputSystem.InputActionReference leftGrip, UnityEngine.InputSystem.InputActionReference rightGrip)
     {
         var oar = paddle.GetComponent<Oar>();
         if (oar == null) oar = Undo.AddComponent<Oar>(paddle.gameObject);
         Undo.RecordObject(oar, "Remo");
         oar.preferredHand = hand;
+        oar.leftHand = leftCtrl;
+        oar.rightHand = rightCtrl;
+        oar.leftGrip = leftGrip;
+        oar.rightGrip = rightGrip;
 
         if (oar.handle == null)
         {

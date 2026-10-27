@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.XR;
 
 /// Remo que se AGARRA: acerca la mano a la empunadura, aprieta el GRIP y el remo sigue a tu mano girando
@@ -18,6 +19,17 @@ public class Oar : MonoBehaviour
     public Transform head;
     [Tooltip("Mano que se recomienda para este remo (solo para los logs; puede cogerlo cualquiera)")]
     public XRNode preferredHand = XRNode.LeftHand;
+    [Tooltip("Left Controller del XR Origin: si se asigna, la posicion de la mano sale de aqui (lo que ves en el casco)")]
+    public Transform leftHand;
+    public Transform rightHand;
+    [Tooltip("Acciones de grip de XRI (p. ej. XRI Left Interaction/Select Value). Opcional: tambien se lee del casco")]
+    public InputActionReference leftGrip;
+    public InputActionReference rightGrip;
+
+    [Header("Ayuda visual")]
+    [Tooltip("Bolita en la empunadura: gris = libre, amarilla = mano cerca, verde = agarrada")]
+    public bool showHandleMarker = true;
+    public float markerSize = 0.07f;
 
     [Header("Agarre")]
     [Tooltip("Distancia maxima de la mano a la empunadura para poder cogerla (m)")]
@@ -42,6 +54,15 @@ public class Oar : MonoBehaviour
     Vector3 restHandleDir;          // direccion pivote -> empunadura en reposo (espacio del padre)
     bool prevGripL, prevGripR, nearL, nearR;
     static Oar heldByLeft, heldByRight;   // una mano no puede coger dos remos
+    Renderer marker;
+    float logTimer, distL = -1f, distR = -1f, gripValL, gripValR;
+    string srcL = "-", srcR = "-";
+
+    void OnEnable()
+    {
+        if (leftGrip != null) leftGrip.action.Enable();
+        if (rightGrip != null) rightGrip.action.Enable();
+    }
 
     void Start()
     {
@@ -55,7 +76,9 @@ public class Oar : MonoBehaviour
             return;
         }
         restHandleDir = ParentDir(handle.position - transform.position);
-        if (debugLogs) Debug.Log($"[REMO] '{name}' listo. Empunadura a {restHandleDir.magnitude:F2} m del pivote.");
+        if (showHandleMarker) CreateMarker();
+        if (debugLogs) Debug.Log($"[REMO] '{name}' listo. Empunadura a {restHandleDir.magnitude:F2} m del pivote. " +
+                                 $"Manos: {(leftHand != null ? leftHand.name : "del casco")}/{(rightHand != null ? rightHand.name : "del casco")}");
     }
 
     void Update()
@@ -63,16 +86,71 @@ public class Oar : MonoBehaviour
         UpdateHand(XRNode.LeftHand, ref prevGripL, ref nearL);
         UpdateHand(XRNode.RightHand, ref prevGripR, ref nearR);
 
-        if (IsHeld && XRHandInput.TryGetWorldPosition(HeldBy, trackingSpace, null, out Vector3 hand))
+        if (IsHeld && HandPosition(HeldBy, out Vector3 hand, out _))
             Follow(hand);
         else if (!IsHeld)
             transform.localRotation = Quaternion.Slerp(transform.localRotation, restLocal, returnSpeed * Time.deltaTime);
+
+        UpdateMarker();
+        if (debugLogs)
+        {
+            logTimer += Time.deltaTime;
+            // Solo cuando alguna mano esta a menos de 1 m (para no llenar la Console)
+            bool close = (distL >= 0f && distL < 1f) || (distR >= 0f && distR < 1f) || (distL < 0f && distR < 0f);
+            if (logTimer > 1.5f && close && !IsHeld)
+            {
+                logTimer = 0f;
+                Debug.Log($"[REMO] '{name}': mano izq a {Fmt(distL)} (grip {gripValL:F2}, {srcL}) | der a {Fmt(distR)} (grip {gripValR:F2}, {srcR}) | " +
+                          $"hay que estar a < {grabRadius:F2} m y apretar el grip");
+            }
+        }
+    }
+
+    static string Fmt(float d) => d < 0f ? "?? (no llega la posicion)" : $"{d:F2} m";
+
+    // Posicion de la mano: primero el objeto Left/Right Controller (lo que ves), si no, directamente del casco
+    bool HandPosition(XRNode node, out Vector3 world, out string source)
+    {
+        var t = node == XRNode.LeftHand ? leftHand : rightHand;
+        if (t != null && t.gameObject.activeInHierarchy) { world = t.position; source = "controller"; return true; }
+        source = "casco";
+        return XRHandInput.TryGetWorldPosition(node, trackingSpace, null, out world);
+    }
+
+    float GripValue(XRNode node)
+    {
+        var a = node == XRNode.LeftHand ? leftGrip : rightGrip;
+        float v = a != null ? a.action.ReadValue<float>() : 0f;
+        return Mathf.Max(v, XRHandInput.Grip(node));
+    }
+
+    void CreateMarker()
+    {
+        var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        go.name = "Marca Empunadura";
+        Destroy(go.GetComponent<Collider>());
+        go.transform.SetParent(handle, false);
+        go.transform.localPosition = Vector3.zero;
+        go.transform.localScale = Vector3.one * markerSize / Mathf.Max(handle.lossyScale.x, 0.0001f);
+        marker = go.GetComponent<Renderer>();
+        var sh = Shader.Find("Universal Render Pipeline/Unlit");
+        if (sh != null) marker.material = new Material(sh);
+        marker.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+    }
+
+    void UpdateMarker()
+    {
+        if (marker == null) return;
+        Color c = IsHeld ? new Color(0.2f, 1f, 0.3f) : (nearL || nearR) ? new Color(1f, 0.9f, 0.2f) : new Color(0.8f, 0.8f, 0.8f);
+        if (marker.material.HasProperty("_BaseColor")) marker.material.SetColor("_BaseColor", c);
+        else marker.material.color = c;
     }
 
     void UpdateHand(XRNode node, ref bool prevGrip, ref bool near)
     {
         // Grip con histeresis: se "pulsa" al pasar gripThreshold y se "suelta" al bajar de releaseThreshold
-        float g = XRHandInput.Grip(node);
+        float g = GripValue(node);
+        if (node == XRNode.LeftHand) gripValL = g; else gripValR = g;
         bool wasDown = prevGrip;
         bool down = wasDown ? g > releaseThreshold : g > gripThreshold;
         prevGrip = down;
@@ -83,9 +161,15 @@ public class Oar : MonoBehaviour
             if (!down) Release();
             return;
         }
-        if (!XRHandInput.TryGetWorldPosition(node, trackingSpace, null, out Vector3 hand)) return;
+        if (!HandPosition(node, out Vector3 hand, out string src))
+        {
+            if (node == XRNode.LeftHand) distL = -1f; else distR = -1f;
+            return;
+        }
+        float dist = Vector3.Distance(hand, handle.position);
+        if (node == XRNode.LeftHand) { distL = dist; srcL = src; } else { distR = dist; srcR = src; }
 
-        bool isNear = Vector3.Distance(hand, handle.position) < grabRadius;
+        bool isNear = dist < grabRadius;
         if (isNear && !near && !IsHeld) XRHandInput.Haptic(node, 0.15f, 0.03f);   // "estas tocando la empunadura"
         near = isNear;
 
