@@ -55,6 +55,9 @@ public class BoatSetupTool : EditorWindow
         faceBow = EditorGUILayout.Toggle(new GUIContent("Remero mirando a proa", "Desmarcado = mirando a popa, como un remero real"), faceBow);
         seatOffset = EditorGUILayout.Slider(new GUIContent("Distancia asiento - empunaduras (m)"), seatOffset, 0.2f, 0.8f);
         if (GUILayout.Button("3. Arreglar teletransporte")) FixTeleport();
+
+        EditorGUILayout.Space();
+        if (GUILayout.Button("4. Sacar la barca si esta varada (terreno o colliders debajo)")) FreeBoat();
     }
 
     // ------------------------------------------------------------------ utilidades
@@ -146,6 +149,21 @@ public class BoatSetupTool : EditorWindow
             else Ok($"'{p.name}' agarrable, empunadura a {Vector3.Distance(oar.handle.position, p.position):F2} m del pivote");
         }
 
+        sb.AppendLine("FISICA (¿algo frena la barca?)");
+        var blockers = PhysicsBlockers(out Bounds hull, out float terrainTop);
+        sb.AppendLine($"  Casco: fondo Y={hull.min.y:F2}, tamano {hull.size}");
+        if (!float.IsNegativeInfinity(terrainTop))
+        {
+            if (terrainTop > hull.min.y - 0.05f) Bad($"El TERRENO bajo el casco llega a Y={terrainTop:F2} (por encima del fondo del casco): la barca esta VARADA. Pulsa el boton 4.");
+            else Ok($"El terreno bajo el casco queda {hull.min.y - terrainTop:F2} m por debajo (bien)");
+        }
+        foreach (var c in blockers)
+            Bad($"El casco toca '{c.name}' (capa {LayerMask.LayerToName(c.gameObject.layer)}): la frena o la bloquea. Muevela (boton 4) o quita/ajusta ese collider.");
+        if (blockers.Count == 0) Ok("Ningun collider ajeno toca el casco");
+        if (rb != null && rb.isKinematic) Bad("El Rigidbody de la barca es kinematic: las fuerzas no la mueven");
+        foreach (var r in rowers)
+            if (r.pushForce < 5f) Bad($"BoatHandRowing.pushForce = {r.pushForce}: muy bajo (prueba 30)");
+
         sb.AppendLine("TELETRANSPORTE");
         int anchorLayer = LayerMask.NameToLayer(AnchorLayerName);
         if (anchorLayer < 0) Bad($"No existe la capa '{AnchorLayerName}': los colliders de las anclas son solidos y chocan (pared invisible en el muelle, la barca roza)");
@@ -195,6 +213,89 @@ public class BoatSetupTool : EditorWindow
 
         sb.AppendLine(problems == 0 ? "===== TODO CORRECTO =====" : $"===== {problems} PROBLEMA(S): usa los botones 2 y 3 =====");
         Debug.Log(sb.ToString());
+    }
+
+    // Colliders solidos del casco (sin triggers ni la capa TeleportAnchor)
+    List<Collider> HullColliders()
+    {
+        int anchorLayer = LayerMask.NameToLayer(AnchorLayerName);
+        return boat.GetComponentsInChildren<Collider>(true)
+            .Where(c => c.enabled && !c.isTrigger && c.gameObject.activeInHierarchy && c.gameObject.layer != anchorLayer && !(c is CharacterController))
+            .ToList();
+    }
+
+    // Terreno mas alto bajo el casco y colliders ajenos (que chocan con la barca) que lo tocan
+    List<Collider> PhysicsBlockers(out Bounds hull, out float terrainTop)
+    {
+        var cols = HullColliders();
+        hull = cols.Count > 0 ? cols[0].bounds : new Bounds(boat.transform.position, Vector3.one);
+        foreach (var c in cols) hull.Encapsulate(c.bounds);
+
+        terrainTop = float.NegativeInfinity;
+        var t = Terrain.activeTerrain;   // DEMO: terreno de la isla
+        if (t != null)
+            for (int ix = 0; ix <= 4; ix++)
+                for (int iz = 0; iz <= 4; iz++)
+                {
+                    var p = new Vector3(Mathf.Lerp(hull.min.x, hull.max.x, ix / 4f), 0f, Mathf.Lerp(hull.min.z, hull.max.z, iz / 4f));
+                    terrainTop = Mathf.Max(terrainTop, t.SampleHeight(p) + t.transform.position.y);
+                }
+
+        Physics.SyncTransforms();
+        var result = new List<Collider>();
+        foreach (var hc in cols)
+        {
+            var hits = Physics.OverlapBox(hc.bounds.center, hc.bounds.extents * 0.98f, Quaternion.identity, ~0, QueryTriggerInteraction.Ignore);
+            foreach (var h in hits)
+            {
+                if (h.transform.IsChildOf(boat.transform) || result.Contains(h)) continue;
+                if (Physics.GetIgnoreLayerCollision(hc.gameObject.layer, h.gameObject.layer)) continue;
+                if (h is TerrainCollider && hull.min.y > terrainTop) continue;   // el AABB toca el terreno pero el casco no
+                result.Add(h);
+            }
+        }
+        return result;
+    }
+
+    void FreeBoat()
+    {
+        var blockers = PhysicsBlockers(out Bounds hull, out float terrainTop);
+        bool stuck = blockers.Count > 0 || (!float.IsNegativeInfinity(terrainTop) && terrainTop > hull.min.y - 0.05f);
+        if (!stuck) { Debug.Log("[BARCA] La barca no esta varada ni toca nada: no la muevo."); return; }
+
+        var t = Terrain.activeTerrain;
+        Vector3 start = boat.transform.position;
+        // Busca en anillos cada vez mas lejos un sitio con agua suficiente bajo todo el casco y sin colliders
+        for (float r = 1f; r <= 40f; r += 1f)
+            for (int a = 0; a < 16; a++)
+            {
+                float ang = a * Mathf.PI * 2f / 16f;
+                Vector3 offset = new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * r;
+                Bounds b = hull;
+                b.center += offset;
+                bool deep = true;
+                if (t != null)
+                    for (int ix = 0; ix <= 4 && deep; ix++)
+                        for (int iz = 0; iz <= 4 && deep; iz++)
+                        {
+                            var p = new Vector3(Mathf.Lerp(b.min.x, b.max.x, ix / 4f), 0f, Mathf.Lerp(b.min.z, b.max.z, iz / 4f));
+                            if (t.SampleHeight(p) + t.transform.position.y > b.min.y - 0.4f) deep = false;
+                        }
+                if (!deep) continue;
+                bool clear = Physics.OverlapBox(b.center, b.extents * 1.05f, Quaternion.identity, ~0, QueryTriggerInteraction.Ignore)
+                    .All(h => h.transform.IsChildOf(boat.transform) || h is TerrainCollider ||
+                              Physics.GetIgnoreLayerCollision(boat.gameObject.layer, h.gameObject.layer));
+                if (!clear) continue;
+
+                Undo.RecordObject(boat.transform, "Sacar barca");
+                boat.transform.position = start + offset;
+                UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(boat.gameObject.scene);
+                Selection.activeObject = boat.gameObject;
+                Debug.Log($"[BARCA] Barca movida {r:F0} m (de {start} a {boat.transform.position}) a una zona con agua suficiente y sin colliders. " +
+                          "Comprueba que se puede llegar desde el muelle con el teletransporte (o mueve el ancla del muelle) y guarda (Ctrl+S).");
+                return;
+            }
+        Debug.LogWarning("[BARCA] No encuentro un sitio libre a menos de 40 m: mueve la barca a mano mar adentro.");
     }
 
     static string MaskNames(LayerMask m)

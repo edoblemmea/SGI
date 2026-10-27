@@ -32,6 +32,21 @@ public class BoatDoctor : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         if (rb == null)
         {
+            // Si esta en un hijo de la barca, se copia al objeto del Rigidbody y se quita de aqui
+            var parentRb = GetComponentInParent<Rigidbody>();
+            if (parentRb != null && parentRb.GetComponent<BoatDoctor>() == null)
+            {
+                Debug.Log($"[DOCTOR] Estaba en '{name}' (sin Rigidbody): me paso a '{parentRb.name}', que es el que tiene el Rigidbody.");
+                var copy = parentRb.gameObject.AddComponent<BoatDoctor>();
+                copy.bowReference = bowReference;
+                copy.startDelay = startDelay;
+                copy.phaseSeconds = phaseSeconds;
+                copy.testSpeed = testSpeed;
+                copy.runTest = runTest;
+                copy.spawnMarkers = spawnMarkers;
+                Destroy(this);
+                return;
+            }
             Debug.LogError("[DOCTOR] Este objeto NO tiene Rigidbody. Pon el script en el objeto que lo tiene.");
             enabled = false;
             return;

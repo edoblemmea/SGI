@@ -118,8 +118,9 @@ public class BoatHandRowing : MonoBehaviour
 
         gripL = Grip(leftGrip, XRNode.LeftHand);
         gripR = Grip(rightGrip, XRNode.RightHand);
-        bool heldL = requireOarGrab ? Oar.HeldByHand(XRNode.LeftHand) != null : gripL > gripThreshold;
-        bool heldR = requireOarGrab ? Oar.HeldByHand(XRNode.RightHand) != null : gripR > gripThreshold;
+        // Con remos: cuenta si esa mano tiene un remo Y aprieta el grip (pala en el agua); sin grip, recuperas sin frenar
+        bool heldL = requireOarGrab ? Oar.HeldByHand(XRNode.LeftHand) != null && gripL > gripThreshold : gripL > gripThreshold;
+        bool heldR = requireOarGrab ? Oar.HeldByHand(XRNode.RightHand) != null && gripR > gripThreshold : gripR > gripThreshold;
 
         if (haptics)
         {

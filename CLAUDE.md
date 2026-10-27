@@ -171,11 +171,14 @@ Arquitectura:
   - desactiva su `CharacterController` y los providers de `disableWhileOnBoard`: todos los `LocomotionProvider` salvo Teleportation y Turn;
   - **si el XR Origin no cuelga de la barca, ningún script de remo hace nada**;
   - `Disembark()` lo restaura todo.
-- **Remar:**
-  1. Acercar la mano a la `Empunadura` de un remo (vibra un poco) y apretar el **grip**. El `Oar` gira sobre su chumacera siguiendo la mano, con límites de giro.
-  2. Tirar hacia el cuerpo. La velocidad de la mano (en espacio de la barca) hacia atrás, respecto a hacia donde mira el jugador, genera empuje.
-  3. El giro sale de la diferencia entre ambas manos.
-  - Con `requireOarGrab` solo cuenta una mano que tenga agarrado un remo; sin esa casilla, basta con el grip en el aire.
+- **Remar (versión 27/10, tras probar con el casco):**
+  1. **Coger:** acercar cualquier mano a cualquier empuñadura (radio 0,3 m) y apretar el **grip** → se cogen **los dos remos a la vez**, cada uno con la mano que tiene más cerca (nunca cruzados), y se **embarca automáticamente** (`BoatRowing.Board()`).
+     - Antes, sin embarcar, el **Grab Move** de XRI movía al jugador al tirar del grip y "te salías de la barca".
+  2. **Sujetar:** los remos **se quedan en las manos** hasta desembarcar (`BoatRowing.onDisembarked` → `ReleaseBoth`).
+  3. **Remar:** el **grip = pala en el agua**. Grip apretado y tirar hacia el cuerpo = avanzar (la velocidad de la mano hacia atrás, respecto a donde mira el jugador, en espacio de la barca). Sin grip, se recupera sin frenar. Un solo remo = girar.
+  - Bolita en la empuñadura: gris = libre, amarilla = mano cerca, verde = cogido, azul = pala en el agua.
+  - La posición de las manos sale de los objetos `Left/Right Controller` y el grip de las acciones `XRI Left/Right Interaction/Select Value`. Leerlos solo de `InputDevices` no funcionaba con OpenXR. Lo asigna *Isla Pirata > Barca > 2*.
+- **Física de la barca:** el collider del fondo del casco está desactivado en la escena; las paredes empiezan en Y ≈ 3,98. *Isla Pirata > Barca > Diagnóstico* (sección FÍSICA) comprueba el terreno bajo el casco y los colliders que lo tocan, y el botón **4** mueve la barca a agua más profunda si está varada. `BoatDoctor` se pasa solo al objeto del Rigidbody si está en un hijo.
 - **No usamos joystick** para remar.
 - *Isla Pirata > Barca*: **Diagnóstico** (informe `[BARCA]`), **Preparar barca y remos**, **Arreglar teletransporte**.
 
