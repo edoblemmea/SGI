@@ -55,6 +55,7 @@ public class Oar : MonoBehaviour
     bool prevGripL, prevGripR, nearL, nearR;
     static Oar heldByLeft, heldByRight;   // una mano no puede coger dos remos
     Renderer marker;
+    BoatRowing boat;
     float logTimer, distL = -1f, distR = -1f, gripValL, gripValR;
     string srcL = "-", srcR = "-";
 
@@ -76,6 +77,7 @@ public class Oar : MonoBehaviour
             return;
         }
         restHandleDir = ParentDir(handle.position - transform.position);
+        boat = GetComponentInParent<BoatRowing>();
         if (showHandleMarker) CreateMarker();
         if (debugLogs) Debug.Log($"[REMO] '{name}' listo. Empunadura a {restHandleDir.magnitude:F2} m del pivote. " +
                                  $"Manos: {(leftHand != null ? leftHand.name : "del casco")}/{(rightHand != null ? rightHand.name : "del casco")}");
@@ -183,6 +185,14 @@ public class Oar : MonoBehaviour
         IsHeld = true;
         HeldBy = node;
         if (node == XRNode.LeftHand) heldByLeft = this; else heldByRight = this;
+
+        // Coger los remos = sentarse a remar: si aun no ibas a bordo, embarcas (asi se apagan Move/Grab Move/Gravity
+        // y el XR Origin pasa a ser hijo de la barca; si no, el Grab Move te sacaria de la barca al tirar)
+        if (boat != null && !boat.IsBoarded)
+        {
+            if (debugLogs) Debug.Log("[REMO] No ibas a bordo: embarcas al coger el remo");
+            boat.Board();
+        }
         XRHandInput.Haptic(node, 0.5f, 0.08f);
         if (debugLogs) Debug.Log($"[REMO] '{name}' agarrado con la mano {(node == XRNode.LeftHand ? "izquierda" : "derecha")}" +
                                  (node != preferredHand ? " (es el remo del otro lado, tambien vale)" : ""));
