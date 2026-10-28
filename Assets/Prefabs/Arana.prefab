@@ -220,6 +220,7 @@ MonoBehaviour:
   speedParam: Speed
   attackTrigger: Attack
   dieTrigger: Die
+  fallOverIfNoDieAnim: 1
   audioSource: {fileID: 0}
   alertClip: {fileID: 0}
   attackClip: {fileID: 0}
