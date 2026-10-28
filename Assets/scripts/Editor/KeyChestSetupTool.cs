@@ -54,6 +54,8 @@ public class KeyChestSetupTool : EditorWindow
         chest = (GameObject)EditorGUILayout.ObjectField("Cofre cerrado (chest_close)", chest, typeof(GameObject), true);
         using (new EditorGUI.DisabledScope(chest == null))
             if (GUILayout.Button("Preparar cofre")) PrepareChest();
+        if (GUILayout.Button(new GUIContent("Poner la cerradura en el candado", "Mueve 'Cerradura' (donde encaja la llave) al candado del frente del cofre, en vez de encima de la tapa")))
+            MoveLockToPadlock();
 
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("4. Bolsillo para la llave", EditorStyles.boldLabel);
@@ -85,6 +87,57 @@ public class KeyChestSetupTool : EditorWindow
         Selection.activeObject = pocket.gameObject;
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(pocket.gameObject.scene);
         Debug.Log($"[BOLSILLO] Bolsillo listo para '{key.name}'. La llave vuelve sola si baja de y={pocket.lostBelowY:F2}. Guarda (Ctrl+S).");
+    }
+
+    // Busca el candado en la malla del cofre cerrado: en el lado donde lo que mas sobresale esta centrado (el candado),
+    // a diferencia de los lados planos o con esquinas. Devuelve el punto en el espacio de 'frame' y la direccion hacia fuera.
+    static bool FindPadlock(GameObject model, Transform frame, out Vector3 localPoint, out Vector3 localOut)
+    {
+        localPoint = Vector3.zero; localOut = Vector3.forward;
+        var pts = new System.Collections.Generic.List<Vector3>();
+        foreach (var mf in model.GetComponentsInChildren<MeshFilter>())
+        {
+            if (mf.sharedMesh == null) continue;
+            foreach (var v in mf.sharedMesh.vertices) pts.Add(frame.InverseTransformPoint(mf.transform.TransformPoint(v)));
+        }
+        if (pts.Count == 0) return false;
+        Vector3 min = pts[0], max = pts[0];
+        foreach (var q in pts) { min = Vector3.Min(min, q); max = Vector3.Max(max, q); }
+        Vector3 size = max - min, mid = (min + max) * 0.5f;
+        float best = float.MaxValue;
+        foreach (var d in new[] { Vector3.forward, Vector3.back, Vector3.right, Vector3.left })
+        {
+            Vector3 side = Vector3.Cross(Vector3.up, d);
+            float half = Mathf.Abs(Vector3.Dot(size, new Vector3(Mathf.Abs(side.x), 0f, Mathf.Abs(side.z)))) * 0.5f;
+            float top = pts.Max(q => Vector3.Dot(q, d));
+            var front = pts.Where(q => Vector3.Dot(q, d) > top - Mathf.Max(size.x, size.z) * 0.02f).ToList();
+            float spread = front.Average(q => Mathf.Abs(Vector3.Dot(q - mid, side))) / Mathf.Max(half, 0.001f);
+            if (spread < best)
+            {
+                best = spread;
+                localOut = d;
+                Vector3 c = Vector3.zero;
+                foreach (var q in front) c += q;
+                localPoint = c / front.Count;
+            }
+        }
+        return true;
+    }
+
+    void MoveLockToPadlock()
+    {
+        var cl = FindAnyObjectByType<ChestLock>(FindObjectsInactive.Include);
+        if (cl == null || cl.socket == null || cl.closedModel == null) { Debug.LogError("[COFRE] No hay cofre preparado (ChestLock con Socket y Closed Model). Pulsa antes 'Preparar cofre'."); return; }
+        if (!FindPadlock(cl.closedModel, cl.transform, out Vector3 lp, out Vector3 lo)) { Debug.LogError("[COFRE] El cofre cerrado no tiene mallas."); return; }
+        var lockT = cl.socket.transform;
+        Undo.RecordObject(lockT, "Cerradura");
+        lockT.position = cl.transform.TransformPoint(lp + lo * 0.04f);   // un poco por delante del candado
+        lockT.rotation = Quaternion.LookRotation(cl.transform.TransformDirection(-lo), cl.transform.up);   // la llave entra hacia el cofre
+        var sphere = lockT.GetComponent<SphereCollider>();
+        if (sphere != null) { Undo.RecordObject(sphere, "Cerradura"); sphere.radius = 0.12f / Mathf.Max(lockT.lossyScale.x, 0.0001f); sphere.center = Vector3.zero; }
+        Selection.activeObject = lockT.gameObject;
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(lockT.gameObject.scene);
+        Debug.Log($"[COFRE] Cerradura movida al candado (lado {lo} del cofre, radio 0,12 m). Mira en la Scene que la esfera quede sobre el candado; si no, muevela a mano. Guarda (Ctrl+S).");
     }
 
     // ------------------------------------------------------------------ 1

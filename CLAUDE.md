@@ -153,12 +153,13 @@ Estado: **todo el código está escrito y compila** (comprobado con el Roslyn de
   - se agarra el tronco con el grip (como mucho a 1,2 m) y se sacude la mano en horizontal: se balancea, vibra y caen cocos de la copa (`Copa`);
   - los cocos vuelven a crecer.
 - **Llave**:
+  - si ninguna palmera la tiene en `hiddenKey`, `KeyItem.hideInRandomPalm` la esconde en una al azar al empezar (`ShakeablePalm.HideKey`);
   - lleva `KeyItem` (id `cofre`);
   - va escondida en una palmera (`ShakeablePalm.hiddenKey`). Al empezar sube sola a la copa y se ve entre los cocos;
   - cae tras `dropKeyAfterCoconuts` cocos;
   - al cogerla por primera vez completa el objetivo `llave`.
 - **Cofre** (`ChestLock` en un objeto `Cofre`):
-  - hijos `chest_close` (cerrado), `chest_open` (abierto, oculto), `coins` (recompensa, oculta) y `Cerradura`, con `XRSocketInteractor` y una esfera trigger **encima de la tapa**;
+  - hijos `chest_close` (cerrado), `chest_open` (abierto, oculto), `coins` (recompensa, oculta) y `Cerradura`, con `XRSocketInteractor` y una esfera trigger. *Llave y cofre > Poner la cerradura en el candado* la mueve al candado del frente (busca en la malla el lado donde lo que sobresale está centrado);
   - al encajar la llave correcta cambia de modelo, muestra las monedas, gasta la llave y completa el objetivo `cofre`;
   - para probarlo sin casco: menú contextual **Abrir ahora**.
 - **Bolsillo (`KeyPocket`, *Llave y cofre > 4*):** para llevar la llave mientras remas o trepas (hacen falta las dos manos y el grip, y el fondo de la barca no tiene collider). Se suelta junto a la cadera derecha (bolita verde) y se queda ahí (65 cm bajo la cabeza), kinematic. **No** se usa trigger (el rayo de XRI ignora los triggers): se hace `Physics.IgnoreCollision` con la barca, el CharacterController y la escala. Así se puede **sacar con el rayo desde lejos** sin agacharse. Si cae por debajo de `lostBelowY` (el agua) vuelve sola. Prefijo `[BOLSILLO]`.
@@ -269,6 +270,11 @@ Scripts:
   - no actúa a bordo, porque el CC está apagado.
 - **Escala de cuerda (`RopeLadder`, *Isla Pirata > Escala de cuerda*):** en el costado del barco pirata. Grip cerca de la escala y tirar hacia abajo (manos leídas del casco con `XRHandInput`, sin Climb Provider, porque a bordo está desactivado). Al agarrarla desde la barca hace `Disembark`; al asomar la cabeza por encima de `top` te pone en `deckPoint`; si sueltas abajo vuelves a la barca (`Board`). **Desde lejos:** la raíz lleva BoxCollider + `XRSimpleInteractable`; apuntar con el rayo de XRI y apretar el grip (`selectEntered`) te pone al pie de la escala mirando al casco (sin gravedad) y desde ahí **se trepa con los mandos** (no sube sola, decidido el 28/10). Si no la agarras en `grabWait` (15 s) o sueltas abajo, vuelves a tu sitio en la barca.
 - **Escalada genérica:** sin código, con `Climb Interactable` de XRI.
+
+### 5.5a Rescate del jugador (`PlayerRescue`, *Isla Pirata > Rescate del jugador*)
+- Caer al **mar** (origen por debajo de `waterLevel - underWater` durante 1,5 s) → vuelves al asiento de la barca (`anclaBarco`) y embarcas. No hay natación en la historia.
+- Caer a la **bodega** del barco pirata (dentro de sus bounds y 1,2 m por debajo de la cubierta) → vuelves a `deckPoint`.
+- Al empezar activa el CharacterController y los providers de `BoatRowing.disableWhileOnBoard` si se guardaron desactivados (pasó el 28/10: no se podía andar hasta embarcar y desembarcar).
 
 ### 5.5b Menú de la muñeca (`WristMenu`, *Isla Pirata > Menu muneca*)
 - Canvas World Space hijo del `Left Controller`; **Y** abre/cierra; se pulsa con el rayo derecho.

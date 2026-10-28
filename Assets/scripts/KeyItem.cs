@@ -10,6 +10,8 @@ public class KeyItem : MonoBehaviour
     public string keyId = "cofre";
     [Tooltip("Objetivo que se completa al cogerla por primera vez (vacio = ninguno)")]
     public string objectiveOnGrab = "llave";
+    [Tooltip("Si ninguna palmera sacudible tiene esta llave en 'Hidden Key', se esconde sola en una al azar al empezar")]
+    public bool hideInRandomPalm = true;
     public bool debugLogs = true;
 
     XRGrabInteractable grab;
@@ -19,6 +21,21 @@ public class KeyItem : MonoBehaviour
     {
         grab = GetComponent<XRGrabInteractable>();
         if (grab == null) Debug.LogWarning($"[LLAVE] '{name}' no tiene XR Grab Interactable: no se podra coger.");
+    }
+
+    void Start()
+    {
+        if (!hideInRandomPalm) return;
+        var palms = FindObjectsByType<ShakeablePalm>(FindObjectsInactive.Exclude);
+        foreach (var p in palms) if (p.hiddenKey == transform) return;   // ya hay una palmera con la llave
+        if (palms.Length == 0)
+        {
+            Debug.LogWarning($"[LLAVE] '{name}' no esta escondida y no hay palmeras sacudibles: se queda donde esta.");
+            return;
+        }
+        var palm = palms[Random.Range(0, palms.Length)];
+        palm.HideKey(transform);
+        if (debugLogs) Debug.Log($"[LLAVE] Ninguna palmera tenia la llave: la escondo en '{palm.name}'");
     }
 
     void OnEnable() { if (grab != null) grab.selectEntered.AddListener(OnGrabbed); }
