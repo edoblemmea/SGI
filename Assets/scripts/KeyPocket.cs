@@ -17,8 +17,12 @@ public class KeyPocket : MonoBehaviour
     [Tooltip("Main Camera. Si se deja vacio se busca sola")]
     public Transform head;
 
-    [Header("Posicion (respecto a la cabeza, girando con ella)")]
+    [Header("Posicion (a la altura de la cadera, girando con el cuerpo)")]
+    [Tooltip("X = a la derecha, Z = hacia delante, respecto a la cabeza (m). La Y no se usa: la altura la da Hip Height")]
     public Vector3 offset = new Vector3(0.2f, -0.65f, 0.05f);
+    [Tooltip("Altura del bolsillo sobre el suelo (m). 0 = automatico (algo mas de la mitad de tu altura de pie). " +
+             "Asi no baja contigo al agacharte para cogerla")]
+    public float hipHeight = 0f;
     [Tooltip("Distancia a la que hay que soltar la llave para que se guarde (m)")]
     public float storeRadius = 0.3f;
 
@@ -42,6 +46,8 @@ public class KeyPocket : MonoBehaviour
     bool[] keyColsTrigger;
     Renderer marker;
     bool wasStored;
+    float standHeight = 1.5f, yawAngle;
+    bool yawReady;
 
     void Start()
     {
@@ -67,10 +73,23 @@ public class KeyPocket : MonoBehaviour
     void LateUpdate()
     {
         if (head == null) return;
-        Vector3 f = Vector3.ProjectOnPlane(head.forward, Vector3.up);
-        if (f.sqrMagnitude < 0.0001f) f = transform.forward;
-        Quaternion yaw = Quaternion.LookRotation(f.normalized, Vector3.up);
-        transform.SetPositionAndRotation(head.position + yaw * offset, yaw);
+        // Altura desde el suelo del jugador (Camera Offset), no desde la cabeza: al agacharte el bolsillo no baja contigo
+        float floorY = head.parent != null ? head.parent.position.y : head.position.y - standHeight;
+        float h = head.position.y - floorY;
+        if (h > standHeight) standHeight = Mathf.Min(h, 2.1f);   // tu altura de pie (la mayor medida)
+        float hip = hipHeight > 0f ? hipHeight : Mathf.Max(standHeight, 1.2f) * 0.58f;
+
+        // Giro del cuerpo: sigue a la cabeza suavemente, pero no cuando miras hacia abajo (para buscar la llave)
+        Vector3 fw = head.forward;
+        if (Mathf.Abs(fw.y) < 0.85f)
+        {
+            float target = Mathf.Atan2(fw.x, fw.z) * Mathf.Rad2Deg;
+            yawAngle = yawReady ? Mathf.LerpAngle(yawAngle, target, 5f * Time.deltaTime) : target;
+            yawReady = true;
+        }
+        Quaternion yaw = Quaternion.Euler(0f, yawAngle, 0f);
+        Vector3 pos = new Vector3(head.position.x, floorY + hip, head.position.z) + yaw * new Vector3(offset.x, 0f, offset.z);
+        transform.SetPositionAndRotation(pos, yaw);
 
         if (HasKey) key.transform.SetPositionAndRotation(transform.position, transform.rotation * Quaternion.Euler(0f, 0f, 90f));
         else if (key != null && !key.isSelected && Lost()) Store("la llave se habia perdido");
