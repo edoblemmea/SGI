@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.Attachment;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 /// Marca un objeto agarrable como llave. Ponlo en la llave (rust_key), que debe tener Rigidbody + XR Grab Interactable.
@@ -21,6 +22,8 @@ public class KeyItem : MonoBehaviour
     {
         grab = GetComponent<XRGrabInteractable>();
         if (grab == null) Debug.LogWarning($"[LLAVE] '{name}' no tiene XR Grab Interactable: no se podra coger.");
+        // Cogida con el rayo desde lejos, viene a la mano (si no, se queda en la punta del rayo y el joystick la aleja)
+        else grab.farAttachMode = InteractableFarAttachMode.Near;
     }
 
     void Start()
