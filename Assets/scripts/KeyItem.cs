@@ -13,6 +13,9 @@ public class KeyItem : MonoBehaviour
     public string objectiveOnGrab = "llave";
     [Tooltip("Si ninguna palmera sacudible tiene esta llave en 'Hidden Key', se esconde sola en una al azar al empezar")]
     public bool hideInRandomPalm = true;
+    [Tooltip("Marcado: cogida con el rayo desde lejos se queda en la punta del rayo y el joystick de esa mano la aleja o la acerca. " +
+             "Desmarcado: siempre viene a la mano")]
+    public bool keepAtDistanceWhenFarGrabbed = true;
     public bool debugLogs = true;
 
     XRGrabInteractable grab;
@@ -22,8 +25,8 @@ public class KeyItem : MonoBehaviour
     {
         grab = GetComponent<XRGrabInteractable>();
         if (grab == null) Debug.LogWarning($"[LLAVE] '{name}' no tiene XR Grab Interactable: no se podra coger.");
-        // Cogida con el rayo desde lejos, viene a la mano (si no, se queda en la punta del rayo y el joystick la aleja)
-        else grab.farAttachMode = InteractableFarAttachMode.Near;
+        // Cogida con el rayo: a distancia (el joystick la aleja/acerca) o siempre a la mano
+        else grab.farAttachMode = keepAtDistanceWhenFarGrabbed ? InteractableFarAttachMode.DeferToInteractor : InteractableFarAttachMode.Near;
     }
 
     void Start()

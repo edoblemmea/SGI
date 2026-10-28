@@ -60,6 +60,19 @@ public class BoatRowing : MonoBehaviour
 
         // Embarcar en Awake (no en Start) para que el Gravity provider no tire al jugador el primer frame
         if (startOnBoard) Board();
+        else EnsureLocomotionOn();
+    }
+
+    // Si la escena se guardo con el CharacterController o el Move desactivados (pasaba: no podias andar hasta
+    // embarcar y desembarcar), se activan al empezar, igual que hace Disembark()
+    void EnsureLocomotionOn()
+    {
+        int n = 0;
+        if (rigCC != null && !rigCC.enabled) { rigCC.enabled = true; n++; }
+        if (disableWhileOnBoard != null)
+            foreach (var b in disableWhileOnBoard)
+                if (b != null && !b.enabled) { b.enabled = true; n++; }
+        if (n > 0) Debug.Log($"[BARCO] Al empezar habia {n} componentes de movimiento desactivados (Move, CharacterController...): activados.");
     }
 
     void FixedUpdate()
