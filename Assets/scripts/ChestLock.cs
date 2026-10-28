@@ -38,13 +38,25 @@ public class ChestLock : MonoBehaviour
     public AudioClip wrongKeyClip;
 
     [Header("Maldicion: solo se abre bajo la luna (opcional)")]
-    [Tooltip("Si se marca, de dia la llave entra pero no gira; de noche se abre (aunque la llave ya estuviera puesta)")]
+    [Tooltip("Si se marca, el cofre solo se abre de noche")]
     public bool requireNight = false;
+    [Tooltip("Desmarcado: hay que hacer que anochezca ANTES de meter la llave; de dia la llave se rechaza y vuelve al bolsillo. " +
+             "Marcado: de dia la llave se queda puesta y el cofre se abre solo al anochecer")]
+    public bool openWhenNightFallsWithKeyIn = false;
+    [Tooltip("Bolsillo de la cadera: si se rechaza la llave vuelve ahi. Vacio = se busca solo")]
+    public KeyPocket keyPocket;
     public DayNightCycle dayNight;
     [Tooltip("Texto que aparece sobre el cofre si intentas abrirlo de dia")]
     public TMPro.TMP_Text hintText;
     public string dayHint = "La llave no gira...\n\"Solo bajo la luna se rompe la maldicion\"";
     public float hintSeconds = 6f;
+
+    [Header("Mensaje al llegar al cofre")]
+    [Tooltip("Al acercarte a menos de esta distancia sale un mensaje (0 = nunca)")]
+    public float approachRadius = 4f;
+    [TextArea] public string approachDayHint = "El cofre maldito...\n\"Solo se abre bajo la luna\"\nDale la vuelta al reloj de arena para que anochezca y luego usa la llave";
+    [TextArea] public string approachNightHint = "Ha salido la luna.\nMete la llave en la cerradura";
+    [TextArea] public string approachNoCurseHint = "El cofre del capitan.\nMete la llave en la cerradura";
     [Tooltip("Luz o efecto en la cerradura que se enciende de noche")]
     public GameObject nightGlow;
     [Tooltip("Al abrirse rompe la maldicion (Curse.Instance)")]
@@ -61,6 +73,7 @@ public class ChestLock : MonoBehaviour
 
     KeyItem waitingKey;   // llave puesta de dia, esperando a la noche
     float hintTimer;
+    bool playerNear;
 
     bool NightOk => !requireNight || (dayNight != null && dayNight.IsNight);
 
@@ -74,6 +87,7 @@ public class ChestLock : MonoBehaviour
 
     void Update()
     {
+        CheckApproach();
         if (nightGlow != null) nightGlow.SetActive(!IsOpen && requireNight && NightOk);
         if (hintText != null && hintTimer > 0f)
         {
@@ -97,10 +111,31 @@ public class ChestLock : MonoBehaviour
         if (debugLogs) Debug.Log("[COFRE] Es de dia: la llave no gira. Hay que esperar a la noche (reloj de arena)");
         if (audioSource != null && wrongKeyClip != null) audioSource.PlayOneShot(wrongKeyClip);
         XRHandInput.HapticBoth(0.4f, 0.15f);
+        Say(dayHint);
+    }
+
+    void Say(string msg)
+    {
         if (hintText == null) return;
-        hintText.text = dayHint;
+        hintText.text = msg;
         hintText.gameObject.SetActive(true);
         hintTimer = hintSeconds;
+    }
+
+    // Mensaje al llegar junto al cofre (una vez cada vez que te acercas)
+    void CheckApproach()
+    {
+        if (IsOpen || approachRadius <= 0f || Camera.main == null) return;
+        float d = Vector3.Distance(Camera.main.transform.position, transform.position);
+        if (!playerNear && d < approachRadius)
+        {
+            playerNear = true;
+            string msg = !requireNight ? approachNoCurseHint : NightOk ? approachNightHint : approachDayHint;
+            if (debugLogs) Debug.Log("[COFRE] Has llegado al cofre: " + msg.Replace("\n", " "));
+            XRHandInput.HapticBoth(0.2f, 0.1f);
+            Say(msg);
+        }
+        else if (playerNear && d > approachRadius + 1.5f) playerNear = false;
     }
 
     void OnEnable()
@@ -129,6 +164,27 @@ public class ChestLock : MonoBehaviour
         if (socket == null) Debug.LogWarning($"[COFRE] '{name}': el campo 'Socket' esta VACIO, no se podra abrir.");
         if (lid == null && (closedModel == null || openModel == null))
             Debug.LogWarning($"[COFRE] '{name}': no hay 'Lid' ni pareja 'Closed/Open Model'. Se completara el objetivo pero no veras abrirse nada.");
+        if (hintText == null) CreateHintText();
+    }
+
+    // Cartel flotante sobre el cofre para los mensajes (si no lo creo la herramienta de la maldicion)
+    void CreateHintText()
+    {
+        Bounds b = new Bounds(transform.position, Vector3.one * 0.5f);
+        foreach (var r in GetComponentsInChildren<Renderer>()) b.Encapsulate(r.bounds);
+        var go = new GameObject("Mensaje cofre");
+        go.transform.SetParent(transform, true);
+        go.transform.position = new Vector3(b.center.x, b.max.y + 0.6f, b.center.z);
+        var t = go.AddComponent<TMPro.TextMeshPro>();
+        t.fontSize = 1.2f;
+        t.alignment = TMPro.TextAlignmentOptions.Center;
+        t.rectTransform.sizeDelta = new Vector2(2.5f, 1f);
+        t.color = new Color(1f, 0.92f, 0.7f);
+        t.outlineWidth = 0.2f;
+        t.outlineColor = Color.black;
+        hintText = t;
+        go.SetActive(false);
+        if (debugLogs) Debug.Log("[COFRE] No habia 'Hint Text': creo un cartel sobre el cofre para los mensajes");
     }
 
     void OnSocketed(SelectEnterEventArgs args)
@@ -144,8 +200,9 @@ public class ChestLock : MonoBehaviour
         }
         if (!NightOk)
         {
-            waitingKey = key;   // se queda puesta; se abrira al anochecer
             ShowHint();
+            if (openWhenNightFallsWithKeyIn) waitingKey = key;   // se queda puesta; se abrira al anochecer
+            else StartCoroutine(RejectKey(args.interactableObject));   // hay que hacer de noche antes
             return;
         }
         Open(key);
@@ -178,6 +235,27 @@ public class ChestLock : MonoBehaviour
         if (!string.IsNullOrEmpty(objectiveId) && GameManager.Instance != null)
             GameManager.Instance.CompleteObjective(objectiveId);
         onOpened?.Invoke();
+    }
+
+    // De dia: la cerradura suelta la llave y la devuelve al bolsillo (o la aparta), y no la acepta durante un momento
+    IEnumerator RejectKey(IXRSelectInteractable keyInteractable)
+    {
+        yield return null;   // no tocar la seleccion dentro de su propio evento
+        if (socket == null) yield break;
+        socket.socketActive = false;
+        if (socket.interactionManager != null && socket.IsSelecting(keyInteractable))
+            socket.interactionManager.SelectExit((IXRSelectInteractor)socket, keyInteractable);
+        yield return null;
+        var pocket = keyPocket != null ? keyPocket : FindAnyObjectByType<KeyPocket>();
+        if (pocket != null) pocket.StoreNow("la llave no gira de dia");
+        else
+        {
+            var rb = keyInteractable.transform.GetComponent<Rigidbody>();
+            if (rb != null && !rb.isKinematic) rb.linearVelocity = Vector3.up * 1.5f + transform.forward;   // salta de la cerradura
+        }
+        if (debugLogs) Debug.Log("[COFRE] Llave rechazada: hay que hacer que anochezca ANTES de meterla" + (pocket != null ? " (vuelve al bolsillo)" : ""));
+        yield return new WaitForSeconds(2f);
+        socket.socketActive = true;
     }
 
     IEnumerator RotateLid()

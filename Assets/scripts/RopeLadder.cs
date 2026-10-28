@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using UnityEngine.XR;
 using UnityEngine.XR.Interaction.Toolkit;
@@ -8,7 +7,8 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 /// Trepar: acerca una mano a la escala, aprieta el GRIP y tira hacia ABAJO (como en una escalera de verdad).
 /// Se puede ir alternando las manos. Al asomar la cabeza por encima de la borda apareces en la cubierta ('deckPoint').
 /// Si sueltas las dos manos abajo del todo, vuelves a la barca.
-/// Desde lejos: apunta a la escala con el rayo y aprieta el GRIP -> te colocas delante y subes solo (XR Simple Interactable).
+/// Desde lejos: apunta a la escala con el rayo y aprieta el GRIP -> te pones delante de la escala, al pie, y desde ahi trepas
+/// con los mandos como siempre (XR Simple Interactable). Si no la agarras en 'grabWait' segundos, vuelves a la barca.
 /// Lee las manos directamente del casco (XRHandInput), igual que los remos. Lo monta "Isla Pirata > Escala de cuerda".
 public class RopeLadder : MonoBehaviour
 {
@@ -23,13 +23,13 @@ public class RopeLadder : MonoBehaviour
     public float grabRadius = 0.35f;
     [Range(0f, 1f)] public float gripThreshold = 0.5f;
 
-    [Header("Subir apuntando desde lejos")]
-    [Tooltip("Apuntar a la escala con el rayo y apretar el grip = subes solo. Necesita un XR Simple Interactable y un collider en este objeto (los pone la herramienta)")]
+    [Header("Ir a la escala apuntando desde lejos")]
+    [Tooltip("Apuntar a la escala con el rayo y apretar el grip = te pones al pie de la escala (luego trepas con los mandos). Necesita un XR Simple Interactable y un collider en este objeto (los pone la herramienta)")]
     public bool climbByPointing = true;
-    [Tooltip("Velocidad al subir solo (m/s)")]
-    public float autoClimbSpeed = 1.5f;
-    [Tooltip("Distancia del jugador a la escala mientras sube solo (m)")]
+    [Tooltip("A que distancia de la escala te pone (m): lo justo para agarrarla con las manos")]
     public float autoClimbDistance = 0.45f;
+    [Tooltip("Segundos para agarrar la escala despues de ir a ella; si no, vuelves a la barca")]
+    public float grabWait = 15f;
 
     [Header("Jugador")]
     public Transform xrOrigin;
@@ -51,7 +51,9 @@ public class RopeLadder : MonoBehaviour
     Vector3 prevL, prevR;
     float startY, logTimer;
     XRSimpleInteractable pointTarget;
-    bool autoClimbing;
+    float waitGrab;                 // > 0: te ha puesto en la escala y aun no la has agarrado
+    Vector3 boatLocalPos;
+    Quaternion boatLocalRot;
 
     void Awake() => pointTarget = GetComponent<XRSimpleInteractable>();
 
@@ -76,7 +78,6 @@ public class RopeLadder : MonoBehaviour
 
     void Update()
     {
-        if (autoClimbing) return;   // sube sola (AutoClimb)
         bool okL = HandLocal(XRNode.LeftHand, out Vector3 l);
         bool okR = HandLocal(XRNode.RightHand, out Vector3 r);
         Step(XRNode.LeftHand, okL, l, ref holdL, ref prevL, ref prevGripL);
@@ -87,8 +88,23 @@ public class RopeLadder : MonoBehaviour
         // Arriba del todo: a la cubierta
         if (head.position.y >= top.position.y + 0.1f) { Finish(true); return; }
 
+        if (waitGrab > 0f)
+        {
+            // Recien llegado a la escala desde lejos: esperar a que la agarre
+            if (holdL || holdR) waitGrab = 0f;
+            else
+            {
+                waitGrab -= Time.deltaTime;
+                if (waitGrab <= 0f)
+                {
+                    if (debugLogs) Debug.Log("[ESCALA] No has agarrado la escala a tiempo");
+                    Finish(false);
+                }
+                return;
+            }
+        }
         // Las dos manos sueltas abajo del todo: vuelves a la barca (o te quedas colgado si estas a media escala)
-        if (!holdL && !holdR && xrOrigin.position.y <= startY + 0.05f) { Finish(false); return; }
+        else if (!holdL && !holdR && xrOrigin.position.y <= startY + 0.05f) { Finish(false); return; }
 
         if (debugLogs)
         {
@@ -128,22 +144,15 @@ public class RopeLadder : MonoBehaviour
         if (dy < -0.01f) XRHandInput.Haptic(node, 0.1f, 0.02f);
     }
 
-    // Rayo de XRI sobre la escala + grip. Si la mano ya esta tocando la escala, se trepa a mano (Step)
+    // Rayo de XRI sobre la escala + grip: te pone al pie de la escala, mirando al casco. Trepar ya es cosa tuya (Step)
     void OnPointed(SelectEnterEventArgs a)
     {
-        if (!climbByPointing || autoClimbing || !isActiveAndEnabled) return;
-        if (Near(a.interactorObject.transform.position)) return;
-        StartCoroutine(AutoClimb());
-    }
+        if (!climbByPointing || IsClimbing || !isActiveAndEnabled) return;
+        if (Near(a.interactorObject.transform.position)) return;   // ya la estas tocando: se trepa a mano
 
-    IEnumerator AutoClimb()
-    {
-        autoClimbing = true;
-        if (!IsClimbing) Begin();   // desembarca y apaga la locomocion
+        Begin();   // desembarca y apaga la locomocion (sin gravedad: te quedas en la escala)
         holdL = holdR = false;
-
-        // Delante de la escala, mirando al casco (la Z de este objeto mira al barco)
-        Vector3 face = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;
+        Vector3 face = Vector3.ProjectOnPlane(transform.forward, Vector3.up).normalized;   // la Z de este objeto mira al barco
         Vector3 look = Vector3.ProjectOnPlane(head.forward, Vector3.up);
         if (face.sqrMagnitude > 0.001f && look.sqrMagnitude > 0.001f)
             xrOrigin.RotateAround(head.position, Vector3.up, Vector3.SignedAngle(look.normalized, face, Vector3.up));
@@ -152,18 +161,10 @@ public class RopeLadder : MonoBehaviour
         off.y = 0f;
         xrOrigin.position = new Vector3(standAt.x - off.x, Mathf.Max(xrOrigin.position.y, bottom.position.y - 0.5f), standAt.z - off.z);
         startY = xrOrigin.position.y;
-        if (debugLogs) Debug.Log($"[ESCALA] Has apuntado a la escala: subes solo a {autoClimbSpeed:F1} m/s ({top.position.y + 0.1f - head.position.y:F1} m)");
-
-        float buzz = 0f;
-        while (head.position.y < top.position.y + 0.1f)
-        {
-            xrOrigin.position += Vector3.up * autoClimbSpeed * Time.deltaTime;
-            buzz += Time.deltaTime;
-            if (buzz > 0.35f) { buzz = 0f; XRHandInput.HapticBoth(0.1f, 0.03f); }   // "peldano"
-            yield return null;
-        }
-        autoClimbing = false;
-        Finish(true);
+        waitGrab = grabWait;
+        XRHandInput.HapticBoth(0.4f, 0.1f);
+        if (debugLogs) Debug.Log($"[ESCALA] Estas al pie de la escala ({top.position.y + 0.1f - head.position.y:F1} m hasta la borda). " +
+                                 "Suelta el grip, agarra la escala con una mano y tira hacia abajo.");
     }
 
     bool Near(Vector3 world)
@@ -184,7 +185,13 @@ public class RopeLadder : MonoBehaviour
     void Begin()
     {
         cameFromBoat = boat != null && boat.IsBoarded;
-        if (cameFromBoat) boat.Disembark();   // los remos se sueltan solos
+        if (cameFromBoat)
+        {
+            // Recordar el sitio en la barca para volver a el si sueltas la escala abajo
+            boatLocalPos = boat.transform.InverseTransformPoint(xrOrigin.position);
+            boatLocalRot = Quaternion.Inverse(boat.transform.rotation) * xrOrigin.rotation;
+            boat.Disembark();
+        }   // los remos se sueltan solos
         if (cc != null) cc.enabled = false;
         foreach (var b in disableWhileClimbing) if (b != null) b.enabled = false;
         startY = xrOrigin.position.y;
@@ -196,6 +203,7 @@ public class RopeLadder : MonoBehaviour
     {
         IsClimbing = false;
         holdL = holdR = false;
+        waitGrab = 0f;
         if (onDeck)
         {
             // Que la cabeza quede encima del punto de la cubierta
@@ -207,11 +215,11 @@ public class RopeLadder : MonoBehaviour
         if (cc != null) cc.enabled = true;
         if (!onDeck && cameFromBoat && boat != null)
         {
-            xrOrigin.position = new Vector3(xrOrigin.position.x, startY, xrOrigin.position.z);
+            xrOrigin.SetPositionAndRotation(boat.transform.TransformPoint(boatLocalPos), boat.transform.rotation * boatLocalRot);
             boat.Board();
         }
         XRHandInput.HapticBoth(0.5f, 0.1f);
-        if (debugLogs) Debug.Log(onDeck ? "[ESCALA] ¡Arriba! Estas en la cubierta del barco pirata." : "[ESCALA] Has soltado la escala abajo: vuelves a la barca.");
+        if (debugLogs) Debug.Log(onDeck ? "[ESCALA] ¡Arriba! Estas en la cubierta del barco pirata." : (cameFromBoat ? "[ESCALA] Vuelves a la barca." : "[ESCALA] Has soltado la escala."));
     }
 
     void OnDrawGizmosSelected()

@@ -230,7 +230,7 @@ Scripts:
 - **Maldición** (*Isla Pirata > Maldición*):
   - `Curse` (objeto `Maldicion`, `Curse.Instance`): `Break()` dispara el evento `Broke`, al que se suscriben los tótems y los esqueletos;
   - `CurseTotem` (`TotemMaldito.prefab` = StaffOfPain + luz roja que late, más fuerte de noche) se apaga al romperse;
-  - `ChestLock.requireNight`: de día la llave entra pero no gira (texto *"solo bajo la luna…"*, vibración); al anochecer, con la llave puesta, se abre sola. `breaksCurse` llama a `Curse.Break()`;
+  - `ChestLock.requireNight`: **hay que hacer de noche antes de meter la llave** (decidido el 28/10). De día la llave se rechaza (texto *"solo bajo la luna…"*, vibración) y vuelve al bolsillo (`KeyPocket.StoreNow`); la cerradura no acepta nada durante 2 s. Con `openWhenNightFallsWithKeyIn` se vuelve al comportamiento antiguo (la llave se queda y se abre al anochecer). Al acercarse a menos de `approachRadius` (4 m) sale un mensaje según sea de día o de noche; si no hay `hintText`, el cofre crea un cartel TMP encima. `breaksCurse` llama a `Curse.Break()`;
   - `Hourglass` (`RelojArena.prefab`, hecho con primitivas): al darle la vuelta llama a `DayNightCycle.TransitionTo` (9 h ↔ 23 h en 4 s) y la arena se vacía;
   - `DayNightCycle` (objeto `DiaNoche`, `dayLengthMinutes = 0`: el tiempo solo pasa con el reloj o el menú). Menú contextual *Hacer de noche / Hacer de día* para probar sin casco.
 - **Cocos:**
@@ -267,7 +267,7 @@ Scripts:
   - se nada a partir de 1,3 m de profundidad (raycast al suelo desde la superficie del agua `// DEMO:`);
   - se bracea con el grip y hay flotación;
   - no actúa a bordo, porque el CC está apagado.
-- **Escala de cuerda (`RopeLadder`, *Isla Pirata > Escala de cuerda*):** en el costado del barco pirata. Grip cerca de la escala y tirar hacia abajo (manos leídas del casco con `XRHandInput`, sin Climb Provider, porque a bordo está desactivado). Al agarrarla desde la barca hace `Disembark`; al asomar la cabeza por encima de `top` te pone en `deckPoint`; si sueltas abajo vuelves a la barca (`Board`). **Desde lejos:** la raíz lleva BoxCollider + `XRSimpleInteractable`; apuntar con el rayo de XRI y apretar el grip (`selectEntered`) llama a `AutoClimb`: te coloca delante de la escala mirando al casco y te sube a `autoClimbSpeed` (1,5 m/s) hasta la cubierta.
+- **Escala de cuerda (`RopeLadder`, *Isla Pirata > Escala de cuerda*):** en el costado del barco pirata. Grip cerca de la escala y tirar hacia abajo (manos leídas del casco con `XRHandInput`, sin Climb Provider, porque a bordo está desactivado). Al agarrarla desde la barca hace `Disembark`; al asomar la cabeza por encima de `top` te pone en `deckPoint`; si sueltas abajo vuelves a la barca (`Board`). **Desde lejos:** la raíz lleva BoxCollider + `XRSimpleInteractable`; apuntar con el rayo de XRI y apretar el grip (`selectEntered`) te pone al pie de la escala mirando al casco (sin gravedad) y desde ahí **se trepa con los mandos** (no sube sola, decidido el 28/10). Si no la agarras en `grabWait` (15 s) o sueltas abajo, vuelves a tu sitio en la barca.
 - **Escalada genérica:** sin código, con `Climb Interactable` de XRI.
 
 ### 5.5b Menú de la muñeca (`WristMenu`, *Isla Pirata > Menu muneca*)
