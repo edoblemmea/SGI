@@ -10,6 +10,7 @@ using UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation;
 ///     'Agarre' (la empunadura queda en la mano y la hoja hacia delante), 'Hoja' (Box Collider trigger) y 'Punta'.
 ///     La hoja y la empunadura se detectan solas en la malla: la punta es el extremo estrecho; la empunadura, el de la guarda.
 ///  2) La coloca en el suelo junto al ancla del muelle (o junto al objeto seleccionado).
+///  3) Funda en la cadera izquierda (SwordHolster) para llevarla al barco con las manos libres.
 public class SwordSetupTool : EditorWindow
 {
     const string DefaultModel = "Assets/Danvil/Rusty Sword/Prefabs/RustySword.prefab";
@@ -44,6 +45,35 @@ public class SwordSetupTool : EditorWindow
         EditorGUILayout.HelpBox("Junto al ancla del muelle (donde empiezas). Si seleccionas un objeto en la Hierarchy, junto a el.", MessageType.None);
         using (new EditorGUI.DisabledScope(AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) == null))
             if (GUILayout.Button("Colocar espada")) Place();
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("3. Funda en la cadera izquierda", EditorStyles.boldLabel);
+        EditorGUILayout.HelpBox("Para llevarla mientras remas o trepas: se suelta con la empunadura junto a la cadera izquierda y se queda colgada. " +
+                                "Si cae al agua vuelve sola.", MessageType.None);
+        if (GUILayout.Button("Crear / actualizar funda")) CreateHolster();
+    }
+
+    void CreateHolster()
+    {
+        var sw = FindAnyObjectByType<Sword>(FindObjectsInactive.Include);
+        var grab = sw != null ? sw.GetComponent<XRGrabInteractable>() : null;
+        if (grab == null) { Debug.LogError("[FUNDA] No hay espada en la escena: pulsa antes 'Colocar espada'."); return; }
+        var holster = FindAnyObjectByType<SwordHolster>(FindObjectsInactive.Include);
+        if (holster == null)
+        {
+            var go = new GameObject("Funda espada");
+            Undo.RegisterCreatedObjectUndo(go, "Funda");
+            holster = go.AddComponent<SwordHolster>();
+        }
+        Undo.RecordObject(holster, "Funda");
+        holster.sword = grab;
+        if (Camera.main != null) holster.head = Camera.main.transform;
+        // DEMO: el agua no tiene collider; su altura ~ el fondo del casco de la barca de remos
+        var boat = FindAnyObjectByType<BoatRowing>(FindObjectsInactive.Include);
+        if (boat != null) holster.lostBelowY = SetupToolUtils.RenderBounds(boat.gameObject).min.y - 0.3f;
+        Selection.activeObject = holster.gameObject;
+        UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(holster.gameObject.scene);
+        Debug.Log($"[FUNDA] Funda lista para '{grab.name}'. Vuelve sola si cae por debajo de y={holster.lostBelowY:F2}. Guarda (Ctrl+S).");
     }
 
     // ------------------------------------------------------------------ 1

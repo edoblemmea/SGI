@@ -42,6 +42,16 @@ public class EnemyAI : MonoBehaviour
     [Tooltip("Segundos entre empezar el ataque y que el golpe haga dano (0 = inmediato)")]
     public float attackWindup = 0f;
 
+    [Header("Ataque visible (salto)")]
+    [Tooltip("Al atacar, el modelo se encoge, salta hacia el jugador y vuelve: se ve claramente que ataca. El dano llega al saltar")]
+    public bool lunge = true;
+    public float lungeDistance = 0.45f;
+    public float lungeHeight = 0.2f;
+    [Tooltip("Duracion del salto completo (s)")]
+    public float lungeTime = 0.45f;
+    [Tooltip("Lo que se mueve en el salto. Vacio = el objeto del Animator si es un hijo; si no, el enemigo entero (con el agente en pausa)")]
+    public Transform visual;
+
     [Header("Animacion (opcional)")]
     public Animator animator;
     public string speedParam = "Speed";
@@ -63,6 +73,7 @@ public class EnemyAI : MonoBehaviour
     public bool debugLogs = true;
 
     public State Current { get; private set; } = State.Patrol;
+    Vector3 visualRest;
 
     NavMeshAgent agent;
     Health health;
@@ -97,6 +108,10 @@ public class EnemyAI : MonoBehaviour
                                  $"te ve a {detectRange:F0} m y ataca a {attackRange:F1} m");
         if (health == null) Debug.LogWarning($"[ENEMIGO] '{name}' no tiene Health: no se le podra matar.");
         agent.speed = patrolSpeed;
+        // Que se pare bien dentro del alcance del ataque (antes se quedaba justo en el borde y tardaba en morder)
+        agent.stoppingDistance = Mathf.Min(agent.stoppingDistance, attackRange * 0.6f);
+        if (visual == null && animator != null && animator.transform != transform) visual = animator.transform;
+        if (visual != null) visualRest = visual.localPosition;
     }
 
     void Update()
@@ -178,8 +193,57 @@ public class EnemyAI : MonoBehaviour
         attackTimer = attackCooldown;
         SetTrigger(attackTrigger);
         if (audioSource != null && attackClip != null) audioSource.PlayOneShot(attackClip);
+        if (debugLogs) Debug.Log($"[ENEMIGO] '{name}' ataca");
+        if (lunge) { StartCoroutine(Lunge()); return; }
         if (attackWindup <= 0f) Hit();
         else windupTimer = attackWindup;
+    }
+
+    // Encogerse (atras y arriba), saltar hacia delante (golpe) y volver. Solo mueve el modelo, no el agente
+    System.Collections.IEnumerator Lunge()
+    {
+        float total = Mathf.Max(lungeTime, attackWindup + 0.15f);
+        float hitAt = attackWindup > 0f ? attackWindup / total : 0.6f;   // fraccion del salto en la que muerde
+        bool hit = false;
+        bool whole = visual == null;   // el Animator esta en la raiz (la arana): se mueve todo, con el agente en pausa
+        Transform parent = whole ? null : (visual.parent != null ? visual.parent : transform);
+        Vector3 basePos = transform.position;
+        if (whole) agent.updatePosition = false;
+        for (float t = 0f; t < 1f; t += Time.deltaTime / total)
+        {
+            if (Current == State.Dead) break;
+            Vector3 fwd = transform.forward, up = Vector3.up, off;
+            if (t < hitAt * 0.8f)        // preparar: atras y arriba
+            {
+                float k = Mathf.SmoothStep(0f, 1f, t / (hitAt * 0.8f));
+                off = (-fwd * 0.12f + up * lungeHeight) * k;
+            }
+            else if (t < hitAt)          // salto hacia delante
+            {
+                float k = Mathf.SmoothStep(0f, 1f, (t - hitAt * 0.8f) / (hitAt * 0.2f));
+                off = Vector3.Lerp(-fwd * 0.12f + up * lungeHeight, fwd * lungeDistance + up * lungeHeight * 0.4f, k);
+            }
+            else                         // volver
+            {
+                if (!hit)
+                {
+                    hit = true;
+                    if (TargetDistance(out bool ok) <= attackRange * 1.5f && ok) Hit();
+                }
+                float k = Mathf.SmoothStep(0f, 1f, (t - hitAt) / (1f - hitAt));
+                off = Vector3.Lerp(fwd * lungeDistance + up * lungeHeight * 0.4f, Vector3.zero, k);
+            }
+            if (whole) transform.position = basePos + off;
+            else visual.localPosition = visualRest + parent.InverseTransformVector(off);
+            yield return null;
+        }
+        if (whole)
+        {
+            if (Current != State.Dead) transform.position = basePos;   // muerta a mitad del salto: se queda donde cae
+            if (agent.enabled && agent.isOnNavMesh) agent.nextPosition = transform.position;
+            agent.updatePosition = true;
+        }
+        else if (visual != null) visual.localPosition = visualRest;
     }
 
     void Hit()
