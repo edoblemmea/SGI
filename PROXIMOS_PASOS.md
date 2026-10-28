@@ -33,17 +33,18 @@
 - [ ] Si las rocas salen rosas, convierte sus materiales (`Assets/RockFREE/Materials`) a URP.
 
 ### 4. Materiales rosas
-- [ ] Selecciona los materiales de `ChestFree/Materials` y `Rust Key/Materials` y usa **Edit > Rendering > Materials > Convert Selected Built-in Materials to URP**. El de StaffOfPain lo convierte solo la herramienta de la maldición.
+- [x] Selecciona los materiales de `ChestFree/Materials` y `Rust Key/Materials` y usa **Edit > Rendering > Materials > Convert Selected Built-in Materials to URP**. El de StaffOfPain lo convierte solo la herramienta de la maldición.
 
 ### 5. Palmeras, cocos, llave y cofre
-- [ ] **Isla Pirata > Cocos**: *Crear prefab Coco*. Opcional: cocos en las palmeras del Terrain.
-- [ ] **Isla Pirata > Palmeras sacudibles**: crear el prefab y colocar palmeras sobre la isla.
-- [ ] **Isla Pirata > Llave y cofre**: preparar la llave (`rust_key`), esconderla en una palmera y preparar el cofre (`chest_close`, que ya está **sobre el barco fantasma**).
+- [x] **Isla Pirata > Cocos**: *Crear prefab Coco*. Opcional: cocos en las palmeras del Terrain.
+- [x] **Isla Pirata > Palmeras sacudibles**: crear el prefab y colocar palmeras sobre la isla.
+- [x] **Isla Pirata > Llave y cofre**: preparar la llave (`rust_key`), esconderla en una palmera y preparar el cofre (`chest_close`, que ya está **sobre el barco fantasma**).
+- [x] **Llave y cofre > 4. Bolsillo** (probado el 27/10: la llave se guarda en la cadera).
 
 ### 6. Barco fantasma, esqueletos y maldición
 - [ ] **Isla Pirata > Juego**: *Crear / actualizar GameManager* y, en la sección 2, **Preparar barco fantasma**. Esto crea el ancla de la cubierta y la zona de llegada; los objetivos quedan `llave` → `barco` → `cofre`.
 - [ ] **Isla Pirata > Barca > 3. Arreglar teletransporte** otra vez (para la nueva ancla de la cubierta) y luego **Diagnóstico**.
-- [ ] **Isla Pirata > Escala de cuerda** → *Crear / actualizar escala*: para subir trepando desde la barca. Comprueba que `Abajo` queda a ras del agua y `Punto cubierta` sobre la cubierta.
+- [x] **Isla Pirata > Escala de cuerda** → *Crear / actualizar escala*: para subir trepando desde la barca. Comprueba que `Abajo` queda a ras del agua y `Punto cubierta` sobre la cubierta.
 - [ ] Pulsa **Bake** en `NavMesh`: la cubierta del barco fantasma tiene que salir azul.
 - [ ] **Isla Pirata > Esqueletos piratas**:
   1. *Crear / actualizar prefab Esqueleto*. Arrastra uno a la escena, dale a Play y haz clic derecho en SkeletonCrumble > **Desmoronar ahora**: tiene que caer como un muñeco y hundirse.
@@ -56,7 +57,8 @@
   - en ChestLock, clic derecho > **Abrir ahora**: los tótems se apagan, los esqueletos se desmoronan y salen `[MALDICION]` y `[JUEGO] Objetivo 'cofre'`.
 
 ### 6b. Menú de la muñeca
-- [ ] **Isla Pirata > Menu muneca** → *Crear / actualizar menú de la muñeca*. Hazlo **después** de la maldición (usa `DiaNoche`). En la Console, `[MENU] Menu creado...` sin ningún FALTA. Ctrl+S.
+- [ ] Volver a pulsar *Menu muneca* **después** de *Maldicion* (en el último log salía `dia/noche FALTA`).
+- [x] **Isla Pirata > Menu muneca** → *Crear / actualizar menú de la muñeca*. Hazlo **después** de la maldición (usa `DiaNoche`). En la Console, `[MENU] Menu creado...` sin ningún FALTA. Ctrl+S.
 - [ ] Prueba con el casco: **Y** abre el menú; con el rayo derecho cambia el movimiento a continuo y anda con el joystick izquierdo; cambia el giro; quita la viñeta; cambia la hora; baja el volumen.
 
 ### 7. Telescopio
@@ -81,7 +83,7 @@
   5. El barco fantasma aparece en la carta tras verlo con el catalejo, y no permite viajar.
 
 ### 9. OpenXR (para el PC del casco)
-- [ ] *Project Settings > XR Plug-in Management > OpenXR* (pestaña Windows):
+- [x] *Project Settings > XR Plug-in Management > OpenXR* (pestaña Windows):
   - añadir *Oculus Touch Controller Profile* y *Meta Quest Touch Plus Controller Profile*;
   - en *Play Mode OpenXR Runtime*, elegir **System Default**.
 
@@ -92,9 +94,9 @@
 ---
 
 ## B. Prueba con el casco (en el PC de tu compañera)
-- [ ] Lo básico: mandos visibles, andar, girar, teletransporte.
+- [x] Lo básico: mandos visibles, andar, girar, teletransporte.
 - [x] Barca: teletransporte del muelle a la barca, coger los remos con el grip, remar y volver (probado el 27/10).
-- [ ] Palmeras: sacudir, que caigan cocos y la llave.
+- [x] Palmeras: sacudir, que caigan cocos y la llave.
 - [ ] Catalejo: alargarlo con dos manos, mirar por el ocular y ver el barco → `¡Barco a la vista!`.
 - [ ] Barco fantasma: llegar remando (`barco`), teletransportarse a la cubierta, luchar contra los esqueletos.
 - [ ] Final: llave en el cofre de día ("solo bajo la luna…") → darle la vuelta al reloj de arena → noche → se abre → maldición rota → victoria.

@@ -177,7 +177,7 @@ Arquitectura:
   1. **Coger:** acercar cualquier mano a cualquier empuñadura (radio 0,3 m) y apretar el **grip** → se cogen **los dos remos a la vez**, cada uno con la mano que tiene más cerca (nunca cruzados), y se **embarca automáticamente** (`BoatRowing.Board()`).
      - Antes, sin embarcar, el **Grab Move** de XRI movía al jugador al tirar del grip y "te salías de la barca".
   2. **Sujetar:** los remos **se quedan en las manos** hasta desembarcar (`BoatRowing.onDisembarked` → `ReleaseBoth`).
-  3. **Remar:** el **grip = pala en el agua**. Grip apretado y tirar hacia el cuerpo = avanzar (la velocidad de la mano hacia atrás, respecto a donde mira el jugador, en espacio de la barca). Sin grip, se recupera sin frenar. Un solo remo = girar.
+  3. **Remar:** el **grip = pala en el agua**. Grip apretado y tirar hacia el cuerpo = avanzar (la velocidad de la mano hacia atrás, respecto a donde mira el jugador, en espacio de la barca). Sin grip, se recupera sin frenar. Desde el 27/10 (`allowReverse` desmarcado, por defecto) volver las manos **con** el grip apretado tampoco frena: en las pruebas los jugadores no soltaban el grip y perdían el 60 % de cada remada. Un solo remo = girar.
   - Bolita en la empuñadura: gris = libre, amarilla = mano cerca, verde = cogido, azul = pala en el agua.
   - La posición de las manos sale de los objetos `Left/Right Controller` y el grip de las acciones `XRI Left/Right Interaction/Select Value`. Leerlos solo de `InputDevices` no funcionaba con OpenXR. Lo asigna *Isla Pirata > Barca > 2*.
 - **Física de la barca:** el collider del fondo del casco está desactivado en la escena; las paredes empiezan en Y ≈ 3,98. *Isla Pirata > Barca > Diagnóstico* (sección FÍSICA) comprueba el terreno bajo el casco y los colliders que lo tocan, y el botón **4** mueve la barca a agua más profunda si está varada. `BoatDoctor` se pasa solo al objeto del Rigidbody si está en un hijo.
@@ -267,7 +267,7 @@ Scripts:
   - se nada a partir de 1,3 m de profundidad (raycast al suelo desde la superficie del agua `// DEMO:`);
   - se bracea con el grip y hay flotación;
   - no actúa a bordo, porque el CC está apagado.
-- **Escala de cuerda (`RopeLadder`, *Isla Pirata > Escala de cuerda*):** en el costado del barco pirata. Grip cerca de la escala y tirar hacia abajo (manos leídas del casco con `XRHandInput`, sin Climb Provider, porque a bordo está desactivado). Al agarrarla desde la barca hace `Disembark`; al asomar la cabeza por encima de `top` te pone en `deckPoint`; si sueltas abajo vuelves a la barca (`Board`).
+- **Escala de cuerda (`RopeLadder`, *Isla Pirata > Escala de cuerda*):** en el costado del barco pirata. Grip cerca de la escala y tirar hacia abajo (manos leídas del casco con `XRHandInput`, sin Climb Provider, porque a bordo está desactivado). Al agarrarla desde la barca hace `Disembark`; al asomar la cabeza por encima de `top` te pone en `deckPoint`; si sueltas abajo vuelves a la barca (`Board`). **Desde lejos:** la raíz lleva BoxCollider + `XRSimpleInteractable`; apuntar con el rayo de XRI y apretar el grip (`selectEntered`) llama a `AutoClimb`: te coloca delante de la escala mirando al casco y te sube a `autoClimbSpeed` (1,5 m/s) hasta la cubierta.
 - **Escalada genérica:** sin código, con `Climb Interactable` de XRI.
 
 ### 5.5b Menú de la muñeca (`WristMenu`, *Isla Pirata > Menu muneca*)
