@@ -127,6 +127,9 @@ public class KeyPocket : MonoBehaviour
         wasStored = false;
     }
 
+    /// Guarda la llave en el bolsillo desde otro script (p. ej. el cofre la devuelve si es de dia)
+    public void StoreNow(string why) => Store(why);
+
     void Store(string why)
     {
         HasKey = true;
