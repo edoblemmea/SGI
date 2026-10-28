@@ -74,6 +74,7 @@ public class EnemyAI : MonoBehaviour
 
     public State Current { get; private set; } = State.Patrol;
     Vector3 visualRest;
+    bool noNav;   // sin NavMesh debajo: se mueve en linea recta (UpdateWithoutNavMesh)
 
     NavMeshAgent agent;
     Health health;
@@ -98,7 +99,17 @@ public class EnemyAI : MonoBehaviour
     void Start()
     {
         if (agent == null) { Debug.LogError($"[ENEMIGO] '{name}' no tiene NavMeshAgent."); enabled = false; return; }
-        if (!agent.isOnNavMesh) Debug.LogWarning($"[ENEMIGO] '{name}' NO esta sobre el NavMesh: hornea el NavMesh (NavMesh Surface > Bake) y colocalo encima.");
+        if (agent.enabled && !agent.isOnNavMesh)
+        {
+            // Buscar NavMesh cerca; si no hay (p. ej. la cubierta del barco sin hornear), perseguir en linea recta
+            if (NavMesh.SamplePosition(transform.position, out NavMeshHit nh, 2f, NavMesh.AllAreas)) agent.Warp(nh.position);
+            if (!agent.isOnNavMesh)
+            {
+                noNav = true;
+                agent.enabled = false;
+                Debug.LogWarning($"[ENEMIGO] '{name}' NO esta sobre el NavMesh: te perseguira en linea recta. Para que esquive obstaculos, hornea el NavMesh (NavMesh Surface > Bake).");
+            }
+        }
         // Si no le han puesto objetivo (p. ej. un prefab colocado a mano), va a por el jugador: la camara y su Health
         if (target == null && Camera.main != null) target = Camera.main.transform;
         if (targetHealth == null && target != null) targetHealth = target.GetComponentInParent<Health>();
@@ -107,7 +118,7 @@ public class EnemyAI : MonoBehaviour
         if (debugLogs) Debug.Log($"[ENEMIGO] '{name}' listo: objetivo '{(target != null ? target.name : "-")}', le hace dano a '{(targetHealth != null ? targetHealth.name : "-")}', " +
                                  $"te ve a {detectRange:F0} m y ataca a {attackRange:F1} m");
         if (health == null) Debug.LogWarning($"[ENEMIGO] '{name}' no tiene Health: no se le podra matar.");
-        agent.speed = patrolSpeed;
+        if (agent.enabled) agent.speed = patrolSpeed;
         // Que se pare bien dentro del alcance del ataque (antes se quedaba justo en el borde y tardaba en morder)
         agent.stoppingDistance = Mathf.Min(agent.stoppingDistance, attackRange * 0.6f);
         if (visual == null && animator != null && animator.transform != transform) visual = animator.transform;
@@ -116,7 +127,9 @@ public class EnemyAI : MonoBehaviour
 
     void Update()
     {
-        if (Current == State.Dead || !agent.isOnNavMesh) return;
+        if (Current == State.Dead) return;
+        if (noNav) { UpdateWithoutNavMesh(); return; }
+        if (!agent.isOnNavMesh) return;
         if (GameManager.Instance != null && GameManager.Instance.IsGameOver) { agent.isStopped = true; return; }
 
         attackTimer -= Time.deltaTime;
@@ -151,6 +164,51 @@ public class EnemyAI : MonoBehaviour
         }
 
         SetAnimSpeed(agent.velocity.magnitude);
+    }
+
+    // Sin NavMesh: quieto hasta que te ve; luego va en linea recta hacia ti apoyado en el suelo de debajo, y ataca igual
+    void UpdateWithoutNavMesh()
+    {
+        if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;
+        attackTimer -= Time.deltaTime;
+        float dist = TargetDistance(out bool reachable);
+        float speed = 0f;
+        switch (Current)
+        {
+            case State.Patrol:
+                if (reachable && dist < detectRange) SetState(State.Chase);
+                break;
+            case State.Chase:
+                if (!reachable || dist > loseRange) { SetState(State.Patrol); break; }
+                if (dist <= attackRange) { SetState(State.Attack); break; }
+                FaceTarget();
+                Vector3 d = target.position - transform.position;
+                d.y = 0f;
+                Vector3 step = d.normalized * Mathf.Min(chaseSpeed * Time.deltaTime, Mathf.Max(0f, dist - attackRange * 0.6f));
+                Vector3 next = transform.position + step;
+                // Apoyarse en el suelo de debajo (cubierta, terreno); si no hay suelo delante, no avanza (no se tira al agua)
+                bool ground = false;
+                foreach (var h in Physics.RaycastAll(next + Vector3.up * 1f, Vector3.down, 2.5f, ~0, QueryTriggerInteraction.Ignore))
+                {
+                    if (h.transform.IsChildOf(transform) || (target != null && h.transform.IsChildOf(target.root))) continue;
+                    next.y = h.point.y;
+                    ground = true;
+                    break;
+                }
+                if (ground) { transform.position = next; speed = step.magnitude / Mathf.Max(Time.deltaTime, 0.0001f); }
+                break;
+            case State.Attack:
+                FaceTarget();
+                if (windupTimer >= 0f)
+                {
+                    windupTimer -= Time.deltaTime;
+                    if (windupTimer < 0f && reachable && dist <= attackRange * 1.3f) Hit();
+                }
+                else if (dist > attackRange * 1.3f || !reachable) SetState(State.Chase);
+                else if (attackTimer <= 0f) StartAttack();
+                break;
+        }
+        SetAnimSpeed(speed);
     }
 
     float TargetDistance(out bool reachable)
@@ -208,7 +266,7 @@ public class EnemyAI : MonoBehaviour
         bool whole = visual == null;   // el Animator esta en la raiz (la arana): se mueve todo, con el agente en pausa
         Transform parent = whole ? null : (visual.parent != null ? visual.parent : transform);
         Vector3 basePos = transform.position;
-        if (whole) agent.updatePosition = false;
+        if (whole && agent.enabled) agent.updatePosition = false;
         for (float t = 0f; t < 1f; t += Time.deltaTime / total)
         {
             if (Current == State.Dead) break;
@@ -241,7 +299,7 @@ public class EnemyAI : MonoBehaviour
         {
             if (Current != State.Dead) transform.position = basePos;   // muerta a mitad del salto: se queda donde cae
             if (agent.enabled && agent.isOnNavMesh) agent.nextPosition = transform.position;
-            agent.updatePosition = true;
+            if (agent.enabled) agent.updatePosition = true;
         }
         else if (visual != null) visual.localPosition = visualRest;
     }
