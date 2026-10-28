@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation;
 
 /// Subir / bajar del barco y estabilidad (amortiguacion y quilla). NO empuja el barco: eso lo hace BoatHandRowing.
 ///
@@ -28,6 +29,8 @@ public class BoatRowing : MonoBehaviour
     public Behaviour[] disableWhileOnBoard;
     [Tooltip("Empezar ya a bordo (para probar sin anclas). El XR Origin debe estar colocado dentro del barco.")]
     public bool startOnBoard = false;
+    [Tooltip("Al empezar (si no empiezas a bordo) te pone en el ancla del muelle: la que tiene el evento Disembark de esta barca y esta mas cerca")]
+    public bool startOnDock = true;
     public bool stopBoatOnDisembark = true;
 
     [Header("Eventos")]
@@ -60,7 +63,35 @@ public class BoatRowing : MonoBehaviour
 
         // Embarcar en Awake (no en Start) para que el Gravity provider no tire al jugador el primer frame
         if (startOnBoard) Board();
-        else EnsureLocomotionOn();
+        else
+        {
+            if (startOnDock) PlaceOnDock();
+            EnsureLocomotionOn();
+        }
+    }
+
+    // Empezar sobre las tablas del muelle, como al teletransportarte a el (si no, con gravedad podias caer al agua)
+    void PlaceOnDock()
+    {
+        if (xrOrigin == null) return;
+        TeleportationAnchor best = null;
+        float bestD = float.MaxValue;
+        foreach (var a in FindObjectsByType<TeleportationAnchor>(FindObjectsInactive.Exclude))
+        {
+            if (a.transform.IsChildOf(transform)) continue;   // el ancla de la propia barca no
+            bool disembarks = false;
+            for (int i = 0; i < a.teleporting.GetPersistentEventCount(); i++)
+                if (a.teleporting.GetPersistentTarget(i) == this && a.teleporting.GetPersistentMethodName(i) == nameof(Disembark)) disembarks = true;
+            if (!disembarks) continue;
+            float d = Vector3.Distance(a.transform.position, xrOrigin.position);
+            if (d < bestD) { bestD = d; best = a; }
+        }
+        if (best == null) { Debug.LogWarning("[BARCO] No encuentro el ancla del muelle (con Teleporting -> Disembark): empiezas donde esta el XR Origin."); return; }
+        Transform t = best.teleportAnchorTransform != null ? best.teleportAnchorTransform : best.transform;
+        Vector3 f = Vector3.ProjectOnPlane(t.forward, Vector3.up);
+        xrOrigin.SetPositionAndRotation(t.position, f.sqrMagnitude > 0.001f ? Quaternion.LookRotation(f, Vector3.up) : xrOrigin.rotation);
+        Physics.SyncTransforms();
+        if (debugLogs) Debug.Log($"[BARCO] Empiezas en el muelle ('{best.name}', estabas a {bestD:F1} m).");
     }
 
     // Si la escena se guardo con el CharacterController o el Move desactivados (pasaba: no podias andar hasta
