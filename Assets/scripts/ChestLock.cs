@@ -21,7 +21,9 @@ public class ChestLock : MonoBehaviour
     [Tooltip("Basta con tocar el candado (el Socket) con la llave en la mano: no hace falta soltarla dentro de la cerradura")]
     public bool openByTouch = true;
     [Tooltip("Distancia de cualquier parte de la llave al candado para que cuente como metida (m)")]
-    public float keyholeRadius = 0.15f;
+    public float touchRadius = 0.25f;
+    [Tooltip("Bolita en el candado mientras llevas la llave en la mano: amarilla = acercala, verde = ya casi")]
+    public bool showKeyholeMarker = true;
 
     [Header("A) Tapa que gira")]
     public Transform lid;
@@ -80,6 +82,7 @@ public class ChestLock : MonoBehaviour
     bool playerNear;
     KeyItem[] keys;
     float touchCooldown;
+    Renderer keyholeMarker;
 
     bool NightOk => !requireNight || (dayNight != null && dayNight.IsNight);
 
@@ -132,6 +135,7 @@ public class ChestLock : MonoBehaviour
     // Llave tocando el candado (la tengas en la mano o no): cuenta como meterla
     void CheckKeyTouch()
     {
+        UpdateKeyholeMarker();
         if (IsOpen || !openByTouch || socket == null) return;
         if (touchCooldown > 0f) { touchCooldown -= Time.deltaTime; return; }
         if (keys == null) keys = FindObjectsByType<KeyItem>(FindObjectsInactive.Exclude);
@@ -144,7 +148,7 @@ public class ChestLock : MonoBehaviour
             if (keyPocket != null && keyPocket.HasKey && keyPocket.key != null && keyPocket.key.gameObject == k.gameObject) continue;   // guardada en la cadera
             float d = float.MaxValue;
             foreach (var r in k.GetComponentsInChildren<Renderer>()) d = Mathf.Min(d, Vector3.Distance(r.bounds.ClosestPoint(hole), hole));
-            if (d > keyholeRadius) continue;
+            if (d > touchRadius) continue;
 
             touchCooldown = 2f;
             if (debugLogs) Debug.Log($"[COFRE] La llave toca el candado (a {d:F2} m)");
@@ -158,6 +162,41 @@ public class ChestLock : MonoBehaviour
             else Open(k);
             return;
         }
+    }
+
+    void CreateKeyholeMarker()
+    {
+        var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        go.name = "Marca candado";
+        Destroy(go.GetComponent<Collider>());
+        go.transform.SetParent(socket.transform, false);
+        go.transform.localScale = Vector3.one * 0.06f / Mathf.Max(socket.transform.lossyScale.x, 0.0001f);
+        keyholeMarker = go.GetComponent<Renderer>();
+        var sh = Shader.Find("Universal Render Pipeline/Unlit");
+        if (sh != null) keyholeMarker.material = new Material(sh);
+        keyholeMarker.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        keyholeMarker.enabled = false;
+    }
+
+    // Se ve solo mientras llevas la llave en la mano
+    void UpdateKeyholeMarker()
+    {
+        if (keyholeMarker == null) return;
+        float best = float.MaxValue;
+        bool held = false;
+        if (!IsOpen && keys != null)
+            foreach (var k in keys)
+            {
+                var g = k != null ? k.GetComponent<XRGrabInteractable>() : null;
+                if (g == null || !g.isSelected || !k.gameObject.activeInHierarchy) continue;
+                held = true;
+                best = Mathf.Min(best, Vector3.Distance(k.transform.position, socket.transform.position));
+            }
+        keyholeMarker.enabled = held;
+        if (!held) return;
+        Color c = best < touchRadius * 2f ? new Color(0.2f, 1f, 0.3f) : new Color(1f, 0.85f, 0.2f);
+        if (keyholeMarker.material.HasProperty("_BaseColor")) keyholeMarker.material.SetColor("_BaseColor", c);
+        else keyholeMarker.material.color = c;
     }
 
     static void ReleaseFromHands(KeyItem k)
@@ -223,9 +262,18 @@ public class ChestLock : MonoBehaviour
         // El jugador no choca con el cofre: al inclinarse sobre el, el CharacterController lo empujaba y podia
         // atravesar la cubierta (caias a la bodega)
         var cc = Camera.main != null ? Camera.main.GetComponentInParent<CharacterController>() : null;
+        var chestCols = GetComponentsInChildren<Collider>(true);
         if (cc != null)
-            foreach (var c in GetComponentsInChildren<Collider>(true))
+            foreach (var c in chestCols)
                 if (!c.isTrigger) Physics.IgnoreCollision(cc, c, true);
+
+        // La llave tampoco choca con el cofre: si no, la caja del cofre la frena antes de llegar al candado
+        keys = FindObjectsByType<KeyItem>(FindObjectsInactive.Include);
+        foreach (var k in keys)
+            foreach (var kc in k.GetComponentsInChildren<Collider>(true))
+                foreach (var c in chestCols)
+                    if (!c.isTrigger && kc != c) Physics.IgnoreCollision(kc, c, true);
+        if (showKeyholeMarker && socket != null) CreateKeyholeMarker();
     }
 
     // Cartel flotante sobre el cofre para los mensajes (si no lo creo la herramienta de la maldicion)
