@@ -161,7 +161,7 @@ Estado: **todo el código está escrito y compila** (comprobado con el Roslyn de
   - hijos `chest_close` (cerrado), `chest_open` (abierto, oculto), `coins` (recompensa, oculta) y `Cerradura`, con `XRSocketInteractor` y una esfera trigger **encima de la tapa**;
   - al encajar la llave correcta cambia de modelo, muestra las monedas, gasta la llave y completa el objetivo `cofre`;
   - para probarlo sin casco: menú contextual **Abrir ahora**.
-- **Bolsillo (`KeyPocket`, *Llave y cofre > 4*):** para llevar la llave mientras remas o trepas (hacen falta las dos manos y el grip, y el fondo de la barca no tiene collider). Se suelta junto a la cadera derecha (bolita verde) y se queda ahí, kinematic y con collider trigger para no empujar la barca. Si cae por debajo de `lostBelowY` (el agua) vuelve sola. Prefijo `[BOLSILLO]`.
+- **Bolsillo (`KeyPocket`, *Llave y cofre > 4*):** para llevar la llave mientras remas o trepas (hacen falta las dos manos y el grip, y el fondo de la barca no tiene collider). Se suelta junto a la cadera derecha (bolita verde) y se queda ahí (65 cm bajo la cabeza), kinematic. **No** se usa trigger (el rayo de XRI ignora los triggers): se hace `Physics.IgnoreCollision` con la barca, el CharacterController y la escala. Así se puede **sacar con el rayo desde lejos** sin agacharse. Si cae por debajo de `lostBelowY` (el agua) vuelve sola. Prefijo `[BOLSILLO]`.
 - La llave necesita su Mesh Collider en **Convex** (si no, Unity lo ignora con Rigidbody dinámico y atraviesa el suelo): lo hace *Preparar llave*.
 - Lo monta *Isla Pirata > Llave y cofre*.
 

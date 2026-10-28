@@ -5,7 +5,7 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 /// Bolsillo en la cadera para llevar la llave mientras remas o trepas (necesitas las dos manos).
 ///  - Guardar: suelta la llave (deja de apretar el grip) cerca de tu cadera derecha -> se queda ahi y te sigue.
-///  - Sacar: acerca la mano a la cadera y cogela con el grip, como cualquier objeto.
+///  - Sacar: acerca la mano a la cadera y cogela con el grip, o APUNTALA CON EL RAYO desde lejos y aprieta el grip (viene a la mano).
 ///  - Si la llave cae al agua o se pierde por debajo de 'lostBelowY', vuelve sola al bolsillo.
 /// Va en un objeto propio (no hace falta que sea hijo del XR Origin: se coloca cada frame junto a la cabeza).
 /// Lo monta "Isla Pirata > Llave y cofre > 4. Bolsillo".
@@ -17,12 +17,8 @@ public class KeyPocket : MonoBehaviour
     [Tooltip("Main Camera. Si se deja vacio se busca sola")]
     public Transform head;
 
-    [Header("Posicion (a la altura de la cadera, girando con el cuerpo)")]
-    [Tooltip("X = a la derecha, Z = hacia delante, respecto a la cabeza (m). La Y no se usa: la altura la da Hip Height")]
+    [Header("Posicion (respecto a la cabeza, girando con ella)")]
     public Vector3 offset = new Vector3(0.2f, -0.65f, 0.05f);
-    [Tooltip("Altura del bolsillo sobre el suelo (m). 0 = automatico (algo mas de la mitad de tu altura de pie). " +
-             "Asi no baja contigo al agacharte para cogerla")]
-    public float hipHeight = 0f;
     [Tooltip("Distancia a la que hay que soltar la llave para que se guarde (m)")]
     public float storeRadius = 0.3f;
 
@@ -43,12 +39,9 @@ public class KeyPocket : MonoBehaviour
 
     Rigidbody keyRb;
     Collider[] keyCols;
-    bool[] keyColsTrigger;
     Renderer marker;
     bool wasStored;
-    float standHeight = 1.5f, yawAngle;
-    bool yawReady;
-    Unity.XR.CoreUtils.XROrigin origin;
+    Collider[] ignoreWhileStored;   // barca, jugador y escala: la llave guardada no debe empujarlos
 
     void Start()
     {
@@ -56,8 +49,13 @@ public class KeyPocket : MonoBehaviour
         if (key == null) { Debug.LogWarning("[BOLSILLO] Falta 'Key' (la llave). Usa Isla Pirata > Llave y cofre > 4."); enabled = false; return; }
         keyRb = key.GetComponent<Rigidbody>();
         keyCols = key.GetComponentsInChildren<Collider>(true);
-        keyColsTrigger = new bool[keyCols.Length];
-        for (int i = 0; i < keyCols.Length; i++) keyColsTrigger[i] = keyCols[i].isTrigger;
+        var ignore = new System.Collections.Generic.List<Collider>();
+        var boat = FindAnyObjectByType<BoatRowing>();
+        if (boat != null) ignore.AddRange(boat.GetComponentsInChildren<Collider>(true));
+        var cc = head != null ? head.GetComponentInParent<CharacterController>() : null;
+        if (cc != null) ignore.Add(cc);
+        foreach (var l in FindObjectsByType<RopeLadder>(FindObjectsInactive.Exclude)) ignore.AddRange(l.GetComponentsInChildren<Collider>(true));
+        ignoreWhileStored = ignore.ToArray();
         key.selectEntered.AddListener(OnKeyGrabbed);
         key.selectExited.AddListener(OnKeyReleased);
         if (showMarker) CreateMarker();
@@ -74,25 +72,10 @@ public class KeyPocket : MonoBehaviour
     void LateUpdate()
     {
         if (head == null) return;
-        // Altura desde el suelo del jugador (la raiz del XR Origin), no desde la cabeza: al agacharte el bolsillo no baja contigo.
-        // Ojo: no vale el Camera Offset, en modo 'Device' esta 1,36 m por encima del suelo
-        if (origin == null) origin = head.GetComponentInParent<Unity.XR.CoreUtils.XROrigin>();
-        float floorY = origin != null ? origin.transform.position.y : head.position.y - standHeight;
-        float h = head.position.y - floorY;
-        if (h > standHeight) standHeight = Mathf.Min(h, 2.1f);   // tu altura de pie (la mayor medida)
-        float hip = hipHeight > 0f ? hipHeight : Mathf.Max(standHeight, 1.2f) * 0.58f;
-
-        // Giro del cuerpo: sigue a la cabeza suavemente, pero no cuando miras hacia abajo (para buscar la llave)
-        Vector3 fw = head.forward;
-        if (Mathf.Abs(fw.y) < 0.85f)
-        {
-            float target = Mathf.Atan2(fw.x, fw.z) * Mathf.Rad2Deg;
-            yawAngle = yawReady ? Mathf.LerpAngle(yawAngle, target, 5f * Time.deltaTime) : target;
-            yawReady = true;
-        }
-        Quaternion yaw = Quaternion.Euler(0f, yawAngle, 0f);
-        Vector3 pos = new Vector3(head.position.x, floorY + hip, head.position.z) + yaw * new Vector3(offset.x, 0f, offset.z);
-        transform.SetPositionAndRotation(pos, yaw);
+        Vector3 f = Vector3.ProjectOnPlane(head.forward, Vector3.up);
+        if (f.sqrMagnitude < 0.0001f) f = transform.forward;
+        Quaternion yaw = Quaternion.LookRotation(f.normalized, Vector3.up);
+        transform.SetPositionAndRotation(head.position + yaw * offset, yaw);
 
         if (HasKey) key.transform.SetPositionAndRotation(transform.position, transform.rotation * Quaternion.Euler(0f, 0f, 90f));
         else if (key != null && !key.isSelected && Lost()) Store("la llave se habia perdido");
@@ -131,8 +114,9 @@ public class KeyPocket : MonoBehaviour
         if (!HasKey) return;
         HasKey = false;
         wasStored = true;
-        SetTrigger(false);
-        if (debugLogs) Debug.Log("[BOLSILLO] Has sacado la llave del bolsillo");
+        SetStoredCollisions(false);
+        bool far = Vector3.Distance(a.interactorObject.transform.position, transform.position) > 0.5f;
+        if (debugLogs) Debug.Log("[BOLSILLO] Has sacado la llave del bolsillo" + (far ? " con el rayo" : ""));
     }
 
     void OnKeyReleased(SelectExitEventArgs a)
@@ -143,8 +127,7 @@ public class KeyPocket : MonoBehaviour
         if (debugLogs && d < 1.5f)
         {
             Vector3 rel = transform.InverseTransformPoint(key.transform.position);
-            Debug.Log($"[BOLSILLO] Llave soltada a {d:F2} m del bolsillo (hace falta < {storeRadius:F2}). Estaba {(rel.y > 0 ? "por encima" : "por debajo")} " +
-                      $"{Mathf.Abs(rel.y):F2} m. Bolsillo a {transform.position.y - (origin != null ? origin.transform.position.y : 0f):F2} m del suelo.");
+            Debug.Log($"[BOLSILLO] Llave soltada a {d:F2} m del bolsillo (hace falta < {storeRadius:F2}). Estaba {(rel.y > 0 ? "por encima" : "por debajo")} {Mathf.Abs(rel.y):F2} m.");
         }
 
         // Al sacarla del bolsillo el Rigidbody estaba quieto (kinematic): XRI lo restaura asi al soltarla. Que vuelva a caer.
@@ -168,15 +151,17 @@ public class KeyPocket : MonoBehaviour
             keyRb.isKinematic = true;
         }
         key.transform.SetPositionAndRotation(transform.position, transform.rotation);
-        SetTrigger(true);   // guardada no debe empujar la barca ni al jugador (sigue pudiendose coger)
+        SetStoredCollisions(true);   // guardada no debe empujar la barca ni al jugador (y el rayo la sigue viendo)
         XRHandInput.HapticBoth(0.3f, 0.08f);
         if (debugLogs) Debug.Log("[BOLSILLO] Llave guardada en la cadera" + (why != null ? $" ({why})" : "") + ". Cogela de ahi con el grip cuando la necesites.");
     }
 
-    void SetTrigger(bool stored)
+    // No se usan triggers: el rayo de XRI los ignora y no se podria coger desde lejos. Se ignoran solo esos choques
+    void SetStoredCollisions(bool stored)
     {
-        for (int i = 0; i < keyCols.Length; i++)
-            if (keyCols[i] != null) keyCols[i].isTrigger = stored || keyColsTrigger[i];
+        foreach (var kc in keyCols)
+            foreach (var other in ignoreWhileStored)
+                if (kc != null && other != null && kc != other) Physics.IgnoreCollision(kc, other, stored);
     }
 
     void CreateMarker()
