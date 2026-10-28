@@ -88,7 +88,13 @@ public class EnemyAI : MonoBehaviour
     {
         if (agent == null) { Debug.LogError($"[ENEMIGO] '{name}' no tiene NavMeshAgent."); enabled = false; return; }
         if (!agent.isOnNavMesh) Debug.LogWarning($"[ENEMIGO] '{name}' NO esta sobre el NavMesh: hornea el NavMesh (NavMesh Surface > Bake) y colocalo encima.");
+        // Si no le han puesto objetivo (p. ej. un prefab colocado a mano), va a por el jugador: la camara y su Health
+        if (target == null && Camera.main != null) target = Camera.main.transform;
+        if (targetHealth == null && target != null) targetHealth = target.GetComponentInParent<Health>();
         if (target == null) Debug.LogWarning($"[ENEMIGO] '{name}': campo 'Target' VACIO, solo patrullara.");
+        else if (targetHealth == null) Debug.LogWarning($"[ENEMIGO] '{name}': el jugador no tiene Health: atacara pero no hara dano (Isla Pirata > Juego).");
+        if (debugLogs) Debug.Log($"[ENEMIGO] '{name}' listo: objetivo '{(target != null ? target.name : "-")}', le hace dano a '{(targetHealth != null ? targetHealth.name : "-")}', " +
+                                 $"te ve a {detectRange:F0} m y ataca a {attackRange:F1} m");
         if (health == null) Debug.LogWarning($"[ENEMIGO] '{name}' no tiene Health: no se le podra matar.");
         agent.speed = patrolSpeed;
     }

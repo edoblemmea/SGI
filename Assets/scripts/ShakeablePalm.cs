@@ -124,9 +124,23 @@ public class ShakeablePalm : MonoBehaviour
     {
         keyHanging = false;
         hiddenKey.SetParent(null, true);
+
+        // Que caiga FUERA del tronco: la llave no choca con la palmera y sale despedida hacia un lado
+        // (antes caia por el centro de la copa y se quedaba metida dentro del collider del tronco)
+        var palmCols = GetComponentsInChildren<Collider>();
+        foreach (var kc in hiddenKey.GetComponentsInChildren<Collider>())
+            foreach (var pc in palmCols) Physics.IgnoreCollision(kc, pc, true);
+        Vector3 axis = swayPivot != null ? swayPivot.position : transform.position;
+        float trunk = 0.3f;
+        foreach (var pc in palmCols) trunk = Mathf.Max(trunk, Mathf.Min(pc.bounds.extents.x, pc.bounds.extents.z));
+        Vector3 dir = Vector3.ProjectOnPlane(Random.onUnitSphere, Vector3.up).normalized;
+        if (dir.sqrMagnitude < 0.01f) dir = transform.forward;
+        Vector3 p = hiddenKey.position;
+        hiddenKey.position = new Vector3(axis.x, p.y, axis.z) + dir * (trunk + 0.6f);
+
         SetBodyHanging(hiddenKey.gameObject, false);
         var rb = hiddenKey.GetComponent<Rigidbody>();
-        if (rb != null) rb.linearVelocity = Vector3.ProjectOnPlane(Random.onUnitSphere, Vector3.up).normalized * 0.5f;
+        if (rb != null) rb.linearVelocity = dir * 1.2f;
         XRHandInput.Haptic(handNode, 1f, 0.3f);
         PlayCling(hiddenKey.position, 1f);
         StartCoroutine(ClingOnLanding(rb));

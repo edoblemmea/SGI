@@ -240,7 +240,7 @@ Scripts:
   - `Coco.prefab` sale del `Coconut` del asset Island;
   - `CoconutTree` deja caer cocos automáticamente en las palmeras pintadas en el Terrain (*Isla Pirata > Cocos*);
   - `ShakeablePalm` los suelta al sacudir.
-- **Espada (`Sword`):** solo daña si la tienes en la mano y la punta (`Tip`) va a más de 2 m/s. La hoja necesita un collider trigger. Aún **no hay modelo de espada** elegido.
+- **Espada (`Sword`, *Isla Pirata > Espada*):** `Espada.prefab` con el modelo *Rusty Sword* (Danvil), escalado a 0,95 m. La herramienta detecta en la malla la punta (el extremo estrecho) y la guarda (lo más ancho), y crea `Agarre` (attach: la hoja sale hacia delante de la mano), `Hoja` (Box Collider trigger) y `Punta`. XR Grab Interactable *Instantaneous* (no choca con el mundo en la mano), con el rayo viene a la mano. Solo daña si la tienes en la mano y la punta va a más de 2 m/s (daño = velocidad × 8, tope 50). Se coloca junto al ancla del muelle.
 
 ### 5.4b Telescopio (manipulación con dos manos)
 - `Telescope.cs` sobre `Assets/Prefabs/Telescopio.prefab`, creado por *Isla Pirata > Telescopio* a partir de `Maritime Telescope/URP/Prefabs/maritime_telescope.prefab`. El modelo tiene LOD0-2, cada uno con `first/second/third_segment`.
@@ -353,7 +353,7 @@ Lista de tareas concreta para la siguiente sesión, ideas de mejora y lo que fal
 | 2 | Llave en palmera sacudible + cofre | Código y herramientas hechos; falta montar y probar |
 | 3 | Teletransporte estable muelle ↔ barca | Arreglo hecho (herramienta); falta probar |
 | 4 | `Health` + cocos + arañas | Código y herramientas hechos; falta montar y probar |
-| 5 | Espada + piratas | Piratas hechos; **falta modelo de espada** y montarla |
+| 5 | Espada + piratas | Código y herramientas hechos (*Isla Pirata > Espada*); falta montar y probar |
 | 6 | Maldición: reloj de arena, cofre de noche, tótems, esqueletos que se desmoronan | Código y herramientas hechos; falta montar y probar |
 | 6b | Carta (escalado, wayfinding, objetivos, viaje rápido) | Código y herramienta hechos; falta montar y probar |
 | 6c | Menú de la muñeca (configuración de la navegación y control) | Código y herramienta hechos; falta montar y probar |
