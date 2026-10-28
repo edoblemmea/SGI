@@ -22,6 +22,8 @@ public class RopeLadder : MonoBehaviour
     [Tooltip("Distancia maxima de la mano a la escala para agarrarla (m)")]
     public float grabRadius = 0.35f;
     [Range(0f, 1f)] public float gripThreshold = 0.5f;
+    [Tooltip("Cuanto subes por cada metro que bajas la mano (1 = como una escalera real; mas = cuesta menos)")]
+    public float climbMultiplier = 1.5f;
 
     [Header("Ir a la escala apuntando desde lejos")]
     [Tooltip("Apuntar a la escala con el rayo y apretar el grip = te pones al pie de la escala (luego trepas con los mandos). Necesita un XR Simple Interactable y un collider en este objeto (los pone la herramienta)")]
@@ -51,6 +53,7 @@ public class RopeLadder : MonoBehaviour
     Vector3 prevL, prevR;
     float startY, logTimer;
     XRSimpleInteractable pointTarget;
+    float climbed;
     float waitGrab;                 // > 0: te ha puesto en la escala y aun no la has agarrado
     Vector3 boatLocalPos;
     Quaternion boatLocalRot;
@@ -112,7 +115,9 @@ public class RopeLadder : MonoBehaviour
             if (logTimer > 1f)
             {
                 logTimer = 0f;
-                Debug.Log($"[ESCALA] trepando | izq {(holdL ? "SI" : "no")} der {(holdR ? "SI" : "no")} | cabeza a {top.position.y + 0.1f - head.position.y:F2} m de la borda");
+                Debug.Log($"[ESCALA] trepando | agarrada izq {(holdL ? "SI" : "no")} der {(holdR ? "SI" : "no")} | grip izq {XRHandInput.Grip(XRNode.LeftHand):F2} der {XRHandInput.Grip(XRNode.RightHand):F2} | " +
+                          $"subido {climbed:F2} m en el ultimo segundo | cabeza a {top.position.y + 0.1f - head.position.y:F2} m de la borda");
+                climbed = 0f;
             }
         }
     }
@@ -125,22 +130,31 @@ public class RopeLadder : MonoBehaviour
 
         if (!grip) { hold = false; return; }
 
-        if (pressed && !hold && Near(trackingSpace.TransformPoint(local)))
+        if (pressed && !hold)
         {
+            float dist = Distance(trackingSpace.TransformPoint(local));
+            // Para EMPEZAR hay que tocar la escala; una vez en ella, cualquier grip cuenta como agarrarse
+            if (!IsClimbing && dist >= grabRadius)
+            {
+                if (debugLogs && dist < 3f) Debug.Log($"[ESCALA] grip {(node == XRNode.LeftHand ? "izq" : "der")} a {dist:F2} m de la escala: acercate mas (< {grabRadius:F2} m) o apuntala con el rayo");
+                return;
+            }
             hold = true;
             prev = local;
             XRHandInput.Haptic(node, 0.4f, 0.05f);
             if (!IsClimbing) Begin();
+            if (debugLogs) Debug.Log($"[ESCALA] Mano {(node == XRNode.LeftHand ? "izq" : "der")} agarrada (a {dist:F2} m de la escala). Tira de ella hacia abajo.");
             return;
         }
         if (!hold || !IsClimbing) return;
 
         // La mano se mueve en el espacio del jugador: el jugador se mueve al reves (solo en vertical)
-        float dy = trackingSpace.TransformVector(local - prev).y;
+        float dy = trackingSpace.TransformVector(local - prev).y * climbMultiplier;
         prev = local;
         Vector3 p = xrOrigin.position;
         p.y = Mathf.Max(startY, p.y - dy);
         xrOrigin.position = p;
+        climbed += Mathf.Max(0f, -dy);
         if (dy < -0.01f) XRHandInput.Haptic(node, 0.1f, 0.02f);
     }
 
@@ -167,11 +181,14 @@ public class RopeLadder : MonoBehaviour
                                  "Suelta el grip, agarra la escala con una mano y tira hacia abajo.");
     }
 
-    bool Near(Vector3 world)
+    bool Near(Vector3 world) => Distance(world) < grabRadius;
+
+    // Distancia de un punto a la linea de la escala (de 'bottom' a 'top')
+    float Distance(Vector3 world)
     {
         Vector3 a = bottom.position, b = top.position, ab = b - a;
         float t = Mathf.Clamp01(Vector3.Dot(world - a, ab) / Mathf.Max(ab.sqrMagnitude, 0.0001f));
-        return Vector3.Distance(world, a + ab * t) < grabRadius;
+        return Vector3.Distance(world, a + ab * t);
     }
 
     bool HandLocal(XRNode node, out Vector3 local)
