@@ -29,10 +29,7 @@ public class BoatRowing : MonoBehaviour
     public Behaviour[] disableWhileOnBoard;
     [Tooltip("Empezar ya a bordo (para probar sin anclas). El XR Origin debe estar colocado dentro del barco.")]
     public bool startOnBoard = false;
-    [Tooltip("Donde empiezas la partida (un objeto vacio; su flecha azul = hacia donde miras). Se pega al suelo de debajo. " +
-             "Vacio = el ancla del muelle (si 'Start On Dock' esta marcado)")]
-    public Transform startPoint;
-    [Tooltip("Sin Start Point: empezar en el ancla del muelle (la que tiene el evento Disembark de esta barca y esta mas cerca)")]
+    [Tooltip("Si no hay ningun PlayerStart en la escena: empezar en el ancla del muelle (la que tiene el evento Disembark de esta barca y esta mas cerca)")]
     public bool startOnDock = true;
     public bool stopBoatOnDisembark = true;
 
@@ -68,8 +65,8 @@ public class BoatRowing : MonoBehaviour
         if (startOnBoard) Board();
         else
         {
-            if (startPoint != null) PlaceAt(startPoint, "el punto de inicio");
-            else if (startOnDock) PlaceOnDock();
+            // El inicio lo decide PlayerStart (si hay uno en la escena); si no, el muelle
+            if (startOnDock && FindAnyObjectByType<PlayerStart>() == null) PlaceOnDock();
             EnsureLocomotionOn();
         }
     }
@@ -91,22 +88,8 @@ public class BoatRowing : MonoBehaviour
             if (d < bestD) { bestD = d; best = a; }
         }
         if (best == null) { Debug.LogWarning("[BARCO] No encuentro el ancla del muelle (con Teleporting -> Disembark): empiezas donde esta el XR Origin."); return; }
-        PlaceAt(best.teleportAnchorTransform != null ? best.teleportAnchorTransform : best.transform, $"el muelle ('{best.name}')");
-    }
-
-    // Coloca el XR Origin en 't', mirando hacia su Z, y lo apoya en el suelo de debajo (si lo hay a menos de 3 m)
-    void PlaceAt(Transform t, string what)
-    {
-        Vector3 pos = t.position;
-        foreach (var h in Physics.RaycastAll(pos + Vector3.up * 1f, Vector3.down, 4f, ~0, QueryTriggerInteraction.Ignore))
-        {
-            if (h.transform.IsChildOf(xrOrigin) || h.transform.IsChildOf(transform)) continue;
-            if (pos.y - h.point.y < 3f) { pos.y = h.point.y; break; }
-        }
-        Vector3 f = Vector3.ProjectOnPlane(t.forward, Vector3.up);
-        xrOrigin.SetPositionAndRotation(pos, f.sqrMagnitude > 0.001f ? Quaternion.LookRotation(f, Vector3.up) : xrOrigin.rotation);
-        Physics.SyncTransforms();
-        if (debugLogs) Debug.Log($"[BARCO] Empiezas en {what}, en {pos}.");
+        Vector3 pos = PlayerStart.PlaceOrigin(xrOrigin, best.teleportAnchorTransform != null ? best.teleportAnchorTransform : best.transform, transform);
+        if (debugLogs) Debug.Log($"[BARCO] No hay PlayerStart: empiezas en el muelle ('{best.name}'), en {pos}.");
     }
 
     // Si la escena se guardo con el CharacterController o el Move desactivados (pasaba: no podias andar hasta

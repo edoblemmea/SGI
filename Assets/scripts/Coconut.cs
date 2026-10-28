@@ -25,6 +25,14 @@ public class Coconut : MonoBehaviour
     public Health playerHealth;
     public float headRadius = 0.3f;
 
+    [Header("Que no ruede (hasta el mar)")]
+    [Tooltip("Frena el giro: cuanto mas alto, menos rueda")]
+    public float rollingDamping = 4f;
+    [Tooltip("En el suelo y mas despacio que esto (m/s), el coco se para del todo")]
+    public float settleSpeed = 1.2f;
+    [Tooltip("Rozamiento del coco con el suelo (0-1)")]
+    [Range(0f, 1f)] public float friction = 1f;
+
     [Header("Vida del coco")]
     [Tooltip("Segundos hasta desaparecer si nadie lo coge (0 = nunca)")]
     public float lifetime = 40f;
@@ -45,6 +53,37 @@ public class Coconut : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         grab = GetComponent<XRGrabInteractable>();
+        if (rb != null) rb.angularDamping = rollingDamping;
+        // Mucho rozamiento: en una cuesta se para en vez de rodar hasta el agua
+        var mat = new PhysicsMaterial("Coco") { dynamicFriction = friction, staticFriction = friction,
+                                                frictionCombine = PhysicsMaterialCombine.Maximum, bounciness = 0.1f };
+        foreach (var c in GetComponentsInChildren<Collider>()) c.sharedMaterial = mat;
+    }
+
+    float groundedTime, lastGroundContact = -1f;
+
+    void OnCollisionStay(Collision c)
+    {
+        foreach (var ct in c.contacts)
+            if (ct.normal.y > 0.4f) { lastGroundContact = Time.time; return; }
+    }
+
+    void FixedUpdate()
+    {
+        // Apoyado en el suelo y despacio: se para (y deja de rodar cuesta abajo)
+        if (held || rb == null || rb.isKinematic) return;
+        bool grounded = Time.time - lastGroundContact < 0.1f;
+        if (grounded && rb.linearVelocity.magnitude < settleSpeed)
+        {
+            groundedTime += Time.fixedDeltaTime;
+            if (groundedTime > 0.25f)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+                rb.Sleep();
+            }
+        }
+        else groundedTime = 0f;
     }
 
     void OnEnable()

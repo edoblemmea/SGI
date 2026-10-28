@@ -271,6 +271,11 @@ Scripts:
 - **Escala de cuerda (`RopeLadder`, *Isla Pirata > Escala de cuerda*):** en el costado del barco pirata. Grip cerca de la escala y tirar hacia abajo (manos leídas del casco con `XRHandInput`, sin Climb Provider, porque a bordo está desactivado). Al agarrarla desde la barca hace `Disembark`; al asomar la cabeza por encima de `top` te pone en `deckPoint`; si sueltas abajo vuelves a la barca (`Board`). **Desde lejos:** la raíz lleva BoxCollider + `XRSimpleInteractable`; apuntar con el rayo de XRI y apretar el grip (`selectEntered`) te pone al pie de la escala mirando al casco (sin gravedad) y desde ahí **se trepa con los mandos** (no sube sola, decidido el 28/10). Si no la agarras en `grabWait` (15 s) o sueltas abajo, vuelves a tu sitio en la barca.
 - **Escalada genérica:** sin código, con `Climb Interactable` de XRI.
 
+### 5.5 Inicio del jugador (`PlayerStart`)
+- Componente en un objeto vacío (p. ej. `Inicio jugador`): en `Awake` coloca el XR Origin ahí, apoyado en el suelo de debajo y mirando a su Z (gizmo azul en la Scene).
+- Sin `PlayerStart` en la escena, `BoatRowing.startOnDock` te pone en el ancla del muelle (la que tiene *Teleporting → Disembark* de esa barca). Con `startOnBoard`, se empieza en la barca y ninguno de los dos hace nada.
+- `BoatRowing` sigue activando al empezar el CharacterController y los providers de `disableWhileOnBoard` (se guardaron desactivados en la escena).
+
 ### 5.5a Rescate del jugador (`PlayerRescue`, *Isla Pirata > Rescate del jugador*)
 - Caer al **mar** (origen por debajo de `waterLevel - underWater` durante 1,5 s) → vuelves al asiento de la barca (`anclaBarco`) y embarcas. No hay natación en la historia.
 - Caer a la **bodega** del barco pirata (dentro de sus bounds y 1,2 m por debajo de la cubierta) → vuelves a `deckPoint`.
