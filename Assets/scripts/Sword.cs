@@ -32,6 +32,7 @@ public class Sword : MonoBehaviour
     Vector3 prevTip;
     float tipSpeed;
     readonly Dictionary<Health, float> lastHit = new Dictionary<Health, float>();
+    Health ownerHealth;   // el jugador: la espada no le hace dano a quien la lleva
 
     Vector3 TipPos => tip != null ? tip.position : transform.position;
 
@@ -41,6 +42,26 @@ public class Sword : MonoBehaviour
         if (grab == null) Debug.LogWarning($"[ESPADA] '{name}' no tiene XR Grab Interactable.");
         if (tip == null) Debug.LogWarning($"[ESPADA] '{name}': falta 'Tip'; se medira la velocidad del centro (golpes mas flojos).");
         prevTip = TipPos;
+    }
+
+    void Start()
+    {
+        if (Camera.main != null) ownerHealth = Camera.main.GetComponentInParent<Health>();
+        // Si nadie ha creado la funda (Isla Pirata > Espada > 3), la creo aqui: cadera izquierda
+        if (grab != null && FindAnyObjectByType<SwordHolster>() == null)
+        {
+            var h = new GameObject("Funda espada (auto)").AddComponent<SwordHolster>();
+            h.sword = grab;
+            var boat = FindAnyObjectByType<BoatRowing>();
+            if (boat != null)
+            {
+                // DEMO: el agua no tiene collider; su altura ~ el fondo del casco de la barca de remos
+                float minY = float.MaxValue;
+                foreach (var r in boat.GetComponentsInChildren<Renderer>()) minY = Mathf.Min(minY, r.bounds.min.y);
+                if (minY < float.MaxValue) h.lostBelowY = minY - 0.3f;
+            }
+            if (debugLogs) Debug.Log("[ESPADA] No habia funda en la escena: la creo en la cadera izquierda");
+        }
     }
 
     void OnEnable()
@@ -82,6 +103,7 @@ public class Sword : MonoBehaviour
         if (!held || tipSpeed < minSwingSpeed) return;
         var h = other.GetComponentInParent<Health>();
         if (h == null || h.IsDead || other.transform.IsChildOf(transform)) return;
+        if (h == ownerHealth) return;   // no cortarse a uno mismo
         if (lastHit.TryGetValue(h, out float t) && Time.time - t < hitCooldown) return;
         lastHit[h] = Time.time;
 
