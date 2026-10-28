@@ -47,6 +47,8 @@ public class BoatHandRowing : MonoBehaviour
     [Header("Diagnostico")]
     public bool debugLogs = true;
     public bool haptics = true;
+    [Tooltip("Chapoteo al meter la pala en el agua")]
+    public bool splashSounds = true;
 
     Rigidbody rb;
     Transform trackingSpace;
@@ -131,6 +133,12 @@ public class BoatHandRowing : MonoBehaviour
             if (heldL && !wasHeldL) Haptic(XRNode.LeftHand, 0.3f, 0.06f);   // "clic": el grip se detecta
             if (heldR && !wasHeldR) Haptic(XRNode.RightHand, 0.3f, 0.06f);
         }
+        // Chapoteo al meter la pala en el agua (solo con remos)
+        if (splashSounds && requireOarGrab)
+        {
+            if (heldL && !wasHeldL) ProceduralSounds.Play(ProceduralSounds.Splash(), SplashPoint(XRNode.LeftHand, wl), 0.7f);
+            if (heldR && !wasHeldR) ProceduralSounds.Play(ProceduralSounds.Splash(), SplashPoint(XRNode.RightHand, wr), 0.7f);
+        }
         wasHeldL = heldL;
         wasHeldR = heldR;
 
@@ -192,6 +200,13 @@ public class BoatHandRowing : MonoBehaviour
     void OnCollisionStay(Collision c)
     {
         if (debugLogs) touching.Add($"{c.collider.name} ({LayerMask.LayerToName(c.collider.gameObject.layer)})");
+    }
+
+    // Donde suena el chapoteo: el remo de esa mano (su pala esta fuera de la barca) o, si no, la mano
+    static Vector3 SplashPoint(XRNode node, Vector3 hand)
+    {
+        var oar = Oar.HeldByHand(node);
+        return oar != null ? oar.transform.position : hand;
     }
 
     float Stroke(float v)

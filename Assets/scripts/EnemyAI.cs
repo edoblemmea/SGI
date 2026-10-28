@@ -251,6 +251,7 @@ public class EnemyAI : MonoBehaviour
         attackTimer = attackCooldown;
         SetTrigger(attackTrigger);
         if (audioSource != null && attackClip != null) audioSource.PlayOneShot(attackClip);
+        else ProceduralSounds.Play(VoiceClip(), transform.position, 0.9f);
         if (debugLogs) Debug.Log($"[ENEMIGO] '{name}' ataca");
         if (lunge) { StartCoroutine(Lunge()); return; }
         if (attackWindup <= 0f) Hit();
@@ -323,21 +324,34 @@ public class EnemyAI : MonoBehaviour
     void SetState(State s)
     {
         if (s == Current) return;
-        if (s == State.Chase && Current == State.Patrol && audioSource != null && alertClip != null)
-            audioSource.PlayOneShot(alertClip);
+        if (s == State.Chase && Current == State.Patrol)
+        {
+            if (audioSource != null && alertClip != null) audioSource.PlayOneShot(alertClip);
+            else ProceduralSounds.Play(VoiceClip(), transform.position, 0.6f);
+        }
         if (debugLogs) Debug.Log($"[ENEMIGO] '{name}' {Current} -> {s}");
         Current = s;
         windupTimer = -1f;
     }
 
     // Si le pegan mientras patrulla, va a por el jugador aunque este lejos
+    // Sin sonidos asignados: las aranas (bajitas) sisean y los esqueletos hacen ruido de huesos
+    AudioClip VoiceClip()
+    {
+        var c = GetComponent<Collider>();
+        bool small = c != null ? c.bounds.size.y < 1f : transform.lossyScale.y < 1f;
+        return small ? ProceduralSounds.Hiss() : ProceduralSounds.Rattle();
+    }
+
     void OnHurt(float remaining)
     {
+        ProceduralSounds.Play(ProceduralSounds.Thud(), transform.position, 0.8f);
         if (Current == State.Patrol && target != null) SetState(State.Chase);
     }
 
     void Die()
     {
+        ProceduralSounds.Play(VoiceClip(), transform.position, 1f, 0.7f, 0.2f);
         SetState(State.Dead);
         if (agent.isOnNavMesh) agent.isStopped = true;
         agent.enabled = false;

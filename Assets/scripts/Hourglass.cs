@@ -83,6 +83,7 @@ public class Hourglass : MonoBehaviour
         dayNight.TransitionTo(toNight ? nightHour : dayHour, transitionSeconds);
         XRHandInput.Haptic(hand, 0.7f, 0.2f);
         if (audioSource != null && flipClip != null) audioSource.PlayOneShot(flipClip);
+        else ProceduralSounds.Play(ProceduralSounds.Sand(), transform.position, 0.7f);
         if (debugLogs) Debug.Log(toNight ? "[RELOJ] Le das la vuelta... cae la noche" : "[RELOJ] Le das la vuelta... amanece");
     }
 }

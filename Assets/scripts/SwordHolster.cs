@@ -111,7 +111,7 @@ public class SwordHolster : MonoBehaviour
         if (a.interactorObject is XRSocketInteractor || !HasSword) return;
         HasSword = false;
         wasStored = true;
-        SetStoredCollisions(false);
+        // No se vuelven a activar los choques con la barca, el jugador y la escala: la espada en la mano tampoco debe chocar con ellos (Sword)
         if (debugLogs) Debug.Log("[FUNDA] Desenvainas la espada");
     }
 

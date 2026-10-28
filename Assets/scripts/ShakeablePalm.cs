@@ -72,8 +72,21 @@ public class ShakeablePalm : MonoBehaviour
 
     public int CoconutsLeft => hanging.Count;
 
+    /// Ya se ha sacudido alguna palmera en esta partida (los nidos de aranas esperan a esto)
+    public static bool AnyShaken { get; private set; }
+    public static event System.Action FirstShake;
+
+    static void MarkShaken(string palm)
+    {
+        if (AnyShaken) return;
+        AnyShaken = true;
+        Debug.Log($"[PALMERA] Primera palmera sacudida ('{palm}'): ¡las aranas empiezan a salir de las rocas!");
+        FirstShake?.Invoke();
+    }
+
     void Awake()
     {
+        AnyShaken = false;   // es static: al reiniciar la escena (GameManager.Restart) hay que volver a empezar
         interactable = GetComponent<XRSimpleInteractable>();
         if (interactable == null) Debug.LogWarning($"[PALMERA] '{name}' necesita un XR Simple Interactable para poder agarrarla.");
         if (swayPivot == null) swayPivot = transform;
@@ -240,6 +253,7 @@ public class ShakeablePalm : MonoBehaviour
 
             if (speed > minShakeSpeed)
             {
+                MarkShaken(name);
                 shake += speed * dt;
                 // Empujar el tronco hacia un lado lo inclina hacia ese lado
                 Vector3 local = swayPivot.parent != null ? swayPivot.parent.InverseTransformDirection(v) : v;
@@ -302,6 +316,7 @@ public class ShakeablePalm : MonoBehaviour
     {
         if (!Application.isPlaying) { Debug.Log("[PALMERA] Dale a Play primero."); return; }
         swayVel += new Vector2(Random.Range(-1f, 1f), Random.Range(-1f, 1f)).normalized * 40f;
+        MarkShaken(name);
         DropCoconut();
     }
 

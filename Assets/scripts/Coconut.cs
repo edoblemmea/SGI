@@ -155,6 +155,7 @@ public class Coconut : MonoBehaviour
         else if (debugLogs && c.collider.GetComponentInParent<EnemyAI>() != null)
             Debug.LogWarning($"[COCO] Has dado a '{c.collider.name}' pero no tiene Health: no se le puede hacer dano");
         else if (audioSource != null && hitClip != null) audioSource.PlayOneShot(hitClip, 0.4f);
+        else if (speed > 3f) ProceduralSounds.Play(ProceduralSounds.Thud(), transform.position, Mathf.Clamp01(speed / 10f));
     }
 
     // Coco encima de una arana: la aplasta (muere), vaya rapido o despacio
@@ -171,6 +172,7 @@ public class Coconut : MonoBehaviour
         h.TakeDamage(h.Current + 1f, gameObject);
         if (debugLogs) Debug.Log($"[COCO] ¡Coco encima de '{h.name}': aplastada!");
         if (audioSource != null && hitClip != null) audioSource.PlayOneShot(hitClip);
+        else ProceduralSounds.Play(ProceduralSounds.Thud(), transform.position);
         return true;
     }
 
@@ -184,6 +186,7 @@ public class Coconut : MonoBehaviour
         {
             if (debugLogs) Debug.Log($"[COCO] Impacto a {speed:F1} m/s contra '{h.name}' -> {dmg:F0} de dano" + (enemy ? $" (le quedan {h.Current:F0})" : ""));
             if (audioSource != null && hitClip != null) audioSource.PlayOneShot(hitClip);
+            else ProceduralSounds.Play(ProceduralSounds.Thud(), transform.position);
         }
     }
 }

@@ -22,6 +22,8 @@ public class SpiderNest : MonoBehaviour
     public float emergeSeconds = 1.2f;
 
     [Header("Cuando salen")]
+    [Tooltip("Las aranas no salen hasta que el jugador sacude la primera palmera (si no hay palmeras sacudibles en la escena, no se espera)")]
+    public bool waitForFirstPalmShake = true;
     [Tooltip("Distancia del jugador a la roca para que empiecen a salir")]
     public float triggerRadius = 12f;
     public float interval = 6f;
@@ -41,12 +43,15 @@ public class SpiderNest : MonoBehaviour
     readonly List<GameObject> alive = new List<GameObject>();
     float timer;
     int released;
+    bool waitPalm;
 
     void Start()
     {
         if (spiderPrefab == null) Debug.LogWarning($"[NIDO] '{name}': falta 'Spider Prefab'.");
         if (playerHead == null) Debug.LogWarning($"[NIDO] '{name}': falta 'Player Head'.");
         timer = 1f;   // la primera sale enseguida
+        waitPalm = waitForFirstPalmShake && FindAnyObjectByType<ShakeablePalm>() != null;
+        if (waitPalm && debugLogs) Debug.Log($"[NIDO] '{name}': esperando a que sacudas la primera palmera");
     }
 
     void Update()
@@ -54,6 +59,7 @@ public class SpiderNest : MonoBehaviour
         if (spiderPrefab == null || playerHead == null || exitPoint == null) return;
         if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;
         if (totalSpiders > 0 && released >= totalSpiders) return;
+        if (waitPalm && !ShakeablePalm.AnyShaken) return;
 
         Vector3 d = playerHead.position - transform.position;
         d.y = 0f;
@@ -92,6 +98,7 @@ public class SpiderNest : MonoBehaviour
         Vector3 to = exitPoint.position;
         Quaternion rot = Quaternion.LookRotation(Vector3.ProjectOnPlane(to - from, Vector3.up).normalized + Vector3.forward * 0.0001f);
         if (audioSource != null && emergeClip != null) audioSource.PlayOneShot(emergeClip);
+        else ProceduralSounds.Play(ProceduralSounds.Hiss(), transform.position, 0.5f);
         if (debugLogs) Debug.Log($"[NIDO] Sale una arana de '{name}' ({released}{(totalSpiders > 0 ? "/" + totalSpiders : "")})");
 
         for (float t = 0f; t < 1f; t += Time.deltaTime / Mathf.Max(emergeSeconds, 0.01f))

@@ -276,6 +276,10 @@ Scripts:
 - Sin `PlayerStart` en la escena, `BoatRowing.startOnDock` te pone en el ancla del muelle (la que tiene *Teleporting → Disembark* de esa barca). Con `startOnBoard`, se empieza en la barca y ninguno de los dos hace nada.
 - `BoatRowing` sigue activando al empezar el CharacterController y los providers de `disableWhileOnBoard` (se guardaron desactivados en la escena).
 
+### 5.5c Tótem narrador (`StoryTotem`, *Isla Pirata > Totem narrador*)
+- Un `TotemMaldito` a 2,5 m del inicio (`PlayerStart` o el ancla del muelle), mirando al jugador: el **capitán Calavera, atrapado en el tótem**, cuenta la historia (8 páginas en `pages`) al acercarte a menos de `talkRadius` (4 m).
+- Texto TMP flotando sobre el tótem (se crea solo); cada página dura `secondsPerPage` (7 s) o pasa con A / X. Si te alejas se calla y luego sigue. `voiceClips` opcional (voz grabada por página). Prefijo `[TOTEM]`.
+
 ### 5.5a Rescate del jugador (`PlayerRescue`, *Isla Pirata > Rescate del jugador*)
 - Caer al **mar** (origen por debajo de `waterLevel - underWater` durante 1,5 s) → vuelves al asiento de la barca (`anclaBarco`) y embarcas. No hay natación en la historia.
 - Caer a la **bodega** del barco pirata (dentro de sus bounds y 1,2 m por debajo de la cubierta) → vuelves a `deckPoint`.
@@ -298,6 +302,10 @@ Scripts:
   - Lo monta *Isla Pirata > Juego > Preparar barco fantasma*. La `ZonaIsla` (objetivo `isla`) se eliminó.
 - **`ObjectiveZone`:** completa un objetivo cuando `watch` (la barca), con el jugador a bordo, entra en su Box Collider. Comprueba bounds cada 0,2 s, sin depender de triggers.
 - **`DayNightCycle`:** gira la Directional Light (`// DEMO:`), cambia intensidad, color, ambiente y la exposición de una **copia** del skybox. Eventos `onNightStarted`/`onDayStarted`.
+
+### 5.7 Sonidos (`ProceduralSounds`, clase estática)
+- El asset `AS_Casual_Island_Game_Sounds_FREE` solo tiene 17 sonidos con nombres genéricos. Los que faltan se **generan por código** y se usan **solo si el campo de sonido del script está vacío**: chapoteo del remo (`BoatHandRowing.splashSounds`), siseo de araña / huesos de esqueleto (`EnemyAI`: al verte, atacar, recibir daño y morir; según la altura del collider), golpe del coco, zumbido y tajo de la espada, crujido + campanas al abrir el cofre y *clonc* si es de día, arena del reloj, campanas de objetivo, victoria y derrota (`GameManager`), siseo al salir del nido, *cling* de la llave (`ShakeablePalm`) y olas de fondo (`GameManager.ambientWaves`).
+- `ProceduralSounds.Play(clip, pos)` crea un AudioSource temporal (3D a medias).
 
 ## 6. Lecciones aprendidas (errores que ya pasaron)
 

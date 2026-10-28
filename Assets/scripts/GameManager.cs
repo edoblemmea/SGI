@@ -51,6 +51,9 @@ public class GameManager : MonoBehaviour
     public AudioClip objectiveClip;
     public AudioClip winClip;
     public AudioClip loseClip;
+    [Tooltip("Olas del mar de fondo (generadas por codigo) durante toda la partida")]
+    public bool ambientWaves = true;
+    [Range(0f, 1f)] public float wavesVolume = 0.25f;
 
     [Header("Eventos")]
     public UnityEvent<string> onObjectiveCompleted;
@@ -86,6 +89,16 @@ public class GameManager : MonoBehaviour
     {
         if (debugLogs) Debug.Log($"[JUEGO] Partida empezada con {objectives.Count} objetivos. playerHealth={(playerHealth != null ? playerHealth.name : "NULL (no se podra perder)")}");
         RefreshUI();
+        if (ambientWaves)
+        {
+            var src = new GameObject("Olas (ambiente)").AddComponent<AudioSource>();
+            src.transform.SetParent(transform, false);
+            src.clip = ProceduralSounds.Waves();
+            src.loop = true;
+            src.spatialBlend = 0f;
+            src.volume = wavesVolume;
+            src.Play();
+        }
     }
 
     void Update()
@@ -111,7 +124,7 @@ public class GameManager : MonoBehaviour
         if (debugLogs) Debug.Log($"[JUEGO] Objetivo '{id}' {o.progress}/{o.required}");
         if (o.Done)
         {
-            Play(objectiveClip);
+            Play(objectiveClip != null ? objectiveClip : ProceduralSounds.Chime(true));
             XRHandInput.HapticBoth(0.5f, 0.15f);
             onObjectiveCompleted?.Invoke(id);
         }
@@ -138,7 +151,8 @@ public class GameManager : MonoBehaviour
         Won = won;
         endTime = Time.time;
         if (debugLogs) Debug.Log(won ? "[JUEGO] ===== VICTORIA =====" : "[JUEGO] ===== DERROTA =====");
-        Play(won ? winClip : loseClip);
+        AudioClip endClip = won ? winClip : loseClip;
+        Play(endClip != null ? endClip : ProceduralSounds.Chime(won));
         if (endPanel != null) endPanel.SetActive(true);
         if (endText != null) endText.text = won ? winMessage : loseMessage;
         (won ? onWin : onLose)?.Invoke();
@@ -172,6 +186,8 @@ public class GameManager : MonoBehaviour
 
     void Play(AudioClip clip)
     {
-        if (audioSource != null && clip != null) audioSource.PlayOneShot(clip);
+        if (clip == null) return;
+        if (audioSource != null) audioSource.PlayOneShot(clip);
+        else if (Camera.main != null) ProceduralSounds.Play(clip, Camera.main.transform.position, 0.8f, 0f, 0f);
     }
 }

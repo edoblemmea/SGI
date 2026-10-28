@@ -120,6 +120,7 @@ public class ChestLock : MonoBehaviour
     {
         if (debugLogs) Debug.Log("[COFRE] Es de dia: la llave no gira. Hay que esperar a la noche (reloj de arena)");
         if (audioSource != null && wrongKeyClip != null) audioSource.PlayOneShot(wrongKeyClip);
+        else ProceduralSounds.Play(ProceduralSounds.Clunk(), transform.position);
         XRHandInput.HapticBoth(0.4f, 0.15f);
         Say(dayHint);
     }
@@ -305,6 +306,7 @@ public class ChestLock : MonoBehaviour
         {
             if (debugLogs) Debug.Log($"[COFRE] '{keyTransform.name}' no es la llave correcta");
             if (audioSource != null && wrongKeyClip != null) audioSource.PlayOneShot(wrongKeyClip);
+        else ProceduralSounds.Play(ProceduralSounds.Clunk(), transform.position);
             return;
         }
         if (!NightOk)
@@ -328,6 +330,7 @@ public class ChestLock : MonoBehaviour
         if (debugLogs) Debug.Log($"[COFRE] '{name}' abierto{(key != null ? " con la llave " + key.keyId : "")}");
 
         if (audioSource != null && openClip != null) audioSource.PlayOneShot(openClip);
+        else { ProceduralSounds.Play(ProceduralSounds.Creak(), transform.position); ProceduralSounds.Play(ProceduralSounds.Chime(true), transform.position, 0.6f, 0.3f, 0f); }
         if (lid != null) StartCoroutine(RotateLid());
         if (closedModel != null && openModel != null)
         {
