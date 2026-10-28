@@ -20,6 +20,12 @@ public class Coconut : MonoBehaviour
     [Tooltip("Tope de dano contra enemigos (con 30 de vida, una arana muere de un buen lanzamiento)")]
     public float maxEnemyDamage = 60f;
 
+    [Header("Aplastar aranas")]
+    [Tooltip("Si el coco cae o se queda ENCIMA de un enemigo bajito (una arana), la aplasta aunque vaya despacio")]
+    public bool crushSmallEnemies = true;
+    [Tooltip("Solo enemigos mas bajos que esto (m): las aranas si, los esqueletos no")]
+    public float crushMaxHeight = 1f;
+
     [Header("Golpe en la cabeza al caer")]
     public Transform playerHead;
     public Health playerHealth;
@@ -64,6 +70,7 @@ public class Coconut : MonoBehaviour
 
     void OnCollisionStay(Collision c)
     {
+        TryCrush(c);   // p. ej. lo has dejado con la mano encima de la arana y lo sueltas
         foreach (var ct in c.contacts)
             if (ct.normal.y > 0.4f) { lastGroundContact = Time.time; return; }
     }
@@ -136,6 +143,7 @@ public class Coconut : MonoBehaviour
     void OnCollisionEnter(Collision c)
     {
         if (held) return;
+        if (TryCrush(c)) return;
         float speed = c.relativeVelocity.magnitude;
         if (speed < minImpactSpeed) return;
         var h = c.collider.GetComponentInParent<Health>();
@@ -147,6 +155,23 @@ public class Coconut : MonoBehaviour
         else if (debugLogs && c.collider.GetComponentInParent<EnemyAI>() != null)
             Debug.LogWarning($"[COCO] Has dado a '{c.collider.name}' pero no tiene Health: no se le puede hacer dano");
         else if (audioSource != null && hitClip != null) audioSource.PlayOneShot(hitClip, 0.4f);
+    }
+
+    // Coco encima de una arana: la aplasta (muere), vaya rapido o despacio
+    bool TryCrush(Collision c)
+    {
+        if (held || !crushSmallEnemies) return false;
+        var enemy = c.collider.GetComponentInParent<EnemyAI>();
+        if (enemy == null || enemy.Current == EnemyAI.State.Dead) return false;
+        Bounds eb = c.collider.bounds;
+        if (eb.size.y > crushMaxHeight) return false;                 // demasiado alto (esqueleto)
+        if (transform.position.y < eb.center.y) return false;         // tiene que estar encima, no de lado
+        var h = enemy.GetComponent<Health>();
+        if (h == null || h.IsDead || !hitThisFlight.Add(h)) return false;
+        h.TakeDamage(h.Current + 1f, gameObject);
+        if (debugLogs) Debug.Log($"[COCO] ¡Coco encima de '{h.name}': aplastada!");
+        if (audioSource != null && hitClip != null) audioSource.PlayOneShot(hitClip);
+        return true;
     }
 
     void DamageTarget(Health h, float speed)
