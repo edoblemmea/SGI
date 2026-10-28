@@ -18,6 +18,10 @@ public class ChestLock : MonoBehaviour
     public string requiredKeyId = "cofre";
     [Tooltip("Al abrir, la llave desaparece (se queda 'gastada' en la cerradura)")]
     public bool consumeKey = true;
+    [Tooltip("Basta con tocar el candado (el Socket) con la llave en la mano: no hace falta soltarla dentro de la cerradura")]
+    public bool openByTouch = true;
+    [Tooltip("Distancia de cualquier parte de la llave al candado para que cuente como metida (m)")]
+    public float keyholeRadius = 0.15f;
 
     [Header("A) Tapa que gira")]
     public Transform lid;
@@ -74,6 +78,8 @@ public class ChestLock : MonoBehaviour
     KeyItem waitingKey;   // llave puesta de dia, esperando a la noche
     float hintTimer;
     bool playerNear;
+    KeyItem[] keys;
+    float touchCooldown;
 
     bool NightOk => !requireNight || (dayNight != null && dayNight.IsNight);
 
@@ -88,6 +94,7 @@ public class ChestLock : MonoBehaviour
     void Update()
     {
         CheckApproach();
+        CheckKeyTouch();
         if (nightGlow != null) nightGlow.SetActive(!IsOpen && requireNight && NightOk);
         if (hintText != null && hintTimer > 0f)
         {
@@ -120,6 +127,53 @@ public class ChestLock : MonoBehaviour
         hintText.text = msg;
         hintText.gameObject.SetActive(true);
         hintTimer = hintSeconds;
+    }
+
+    // Llave tocando el candado (la tengas en la mano o no): cuenta como meterla
+    void CheckKeyTouch()
+    {
+        if (IsOpen || !openByTouch || socket == null) return;
+        if (touchCooldown > 0f) { touchCooldown -= Time.deltaTime; return; }
+        if (keys == null) keys = FindObjectsByType<KeyItem>(FindObjectsInactive.Exclude);
+        Vector3 hole = socket.transform.position;
+        foreach (var k in keys)
+        {
+            if (k == null || !k.isActiveAndEnabled) continue;
+            if (!string.IsNullOrEmpty(requiredKeyId) && k.keyId != requiredKeyId) continue;
+            if (keyPocket == null) keyPocket = FindAnyObjectByType<KeyPocket>();
+            if (keyPocket != null && keyPocket.HasKey && keyPocket.key != null && keyPocket.key.gameObject == k.gameObject) continue;   // guardada en la cadera
+            float d = float.MaxValue;
+            foreach (var r in k.GetComponentsInChildren<Renderer>()) d = Mathf.Min(d, Vector3.Distance(r.bounds.ClosestPoint(hole), hole));
+            if (d > keyholeRadius) continue;
+
+            touchCooldown = 2f;
+            if (debugLogs) Debug.Log($"[COFRE] La llave toca el candado (a {d:F2} m)");
+            ReleaseFromHands(k);
+            if (!NightOk)
+            {
+                ShowHint();
+                if (openWhenNightFallsWithKeyIn) waitingKey = k;
+                else StartCoroutine(ToPocket());
+            }
+            else Open(k);
+            return;
+        }
+    }
+
+    static void ReleaseFromHands(KeyItem k)
+    {
+        var g = k.GetComponent<XRGrabInteractable>();
+        if (g == null || !g.isSelected || g.interactionManager == null) return;
+        foreach (var i in new System.Collections.Generic.List<IXRSelectInteractor>(g.interactorsSelecting))
+            g.interactionManager.SelectExit(i, g);
+    }
+
+    IEnumerator ToPocket()
+    {
+        yield return null;
+        var pocket = keyPocket != null ? keyPocket : FindAnyObjectByType<KeyPocket>();
+        if (pocket != null) pocket.StoreNow("la llave no gira de dia");
+        if (debugLogs) Debug.Log("[COFRE] Llave rechazada: hay que hacer que anochezca ANTES de meterla" + (pocket != null ? " (vuelve al bolsillo)" : ""));
     }
 
     // Mensaje al llegar junto al cofre (una vez cada vez que te acercas)
@@ -165,6 +219,13 @@ public class ChestLock : MonoBehaviour
         if (lid == null && (closedModel == null || openModel == null))
             Debug.LogWarning($"[COFRE] '{name}': no hay 'Lid' ni pareja 'Closed/Open Model'. Se completara el objetivo pero no veras abrirse nada.");
         if (hintText == null) CreateHintText();
+
+        // El jugador no choca con el cofre: al inclinarse sobre el, el CharacterController lo empujaba y podia
+        // atravesar la cubierta (caias a la bodega)
+        var cc = Camera.main != null ? Camera.main.GetComponentInParent<CharacterController>() : null;
+        if (cc != null)
+            foreach (var c in GetComponentsInChildren<Collider>(true))
+                if (!c.isTrigger) Physics.IgnoreCollision(cc, c, true);
     }
 
     // Cartel flotante sobre el cofre para los mensajes (si no lo creo la herramienta de la maldicion)
