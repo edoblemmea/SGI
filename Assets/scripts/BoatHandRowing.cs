@@ -36,6 +36,9 @@ public class BoatHandRowing : MonoBehaviour
     public float maxPullSpeed = 2.5f;
     public float pushForce = 6f;            // aceleracion por cada m/s de remada
     public float reverseMultiplier = 0.3f;  // empujar el mando hacia delante con el grip = marcha atras suave
+    [Tooltip("Si se desmarca, empujar hacia delante NUNCA frena (aunque no sueltes el grip al volver): solo cuenta tirar hacia ti. " +
+             "Marcalo para poder ir marcha atras empujando con el grip apretado")]
+    public bool allowReverse = false;
     public float turnForce = 1.5f;          // giro por cada m/s de diferencia entre manos
     public float maxSpeed = 3f;
     public float maxAngularSpeed = 0.8f;
@@ -51,6 +54,7 @@ public class BoatHandRowing : MonoBehaviour
     bool hasPrev, wasHeldL, wasHeldR, warned;
     float pullL, pullR, strokeL, strokeR, rawL, rawR, gripL, gripR, logTimer, notBoardTimer;
     string srcL = "-", srcR = "-";
+    readonly System.Collections.Generic.HashSet<string> touching = new System.Collections.Generic.HashSet<string>();
 
     Transform Ref => bowReference != null ? bowReference : transform;
     bool OnBoard => xrOrigin != null && xrOrigin.IsChildOf(transform);
@@ -184,13 +188,20 @@ public class BoatHandRowing : MonoBehaviour
             rb.AddTorque(Vector3.up * turn, ForceMode.Acceleration);
     }
 
+    // Con que esta rozando la barca (los colliders de los hijos tambien llegan aqui, al objeto del Rigidbody)
+    void OnCollisionStay(Collision c)
+    {
+        if (debugLogs) touching.Add($"{c.collider.name} ({LayerMask.LayerToName(c.collider.gameObject.layer)})");
+    }
+
     float Stroke(float v)
     {
         if (Mathf.Abs(v) < minPullSpeed) return 0f;
         return Mathf.Clamp(v, -maxPullSpeed, maxPullSpeed);
     }
 
-    float Weigh(float s) => s >= 0f ? s : s * reverseMultiplier;
+    // Sin marcha atras, la vuelta de las manos (aunque sea con el grip apretado) no resta: asi remar no cuesta tanto
+    float Weigh(float s) => s >= 0f ? s : (allowReverse ? s * reverseMultiplier : 0f);
 
     void ResetState()
     {
@@ -252,7 +263,10 @@ public class BoatHandRowing : MonoBehaviour
         string oars = requireOarGrab
             ? $"remo izq {(Oar.HeldByHand(XRNode.LeftHand) != null ? "SI" : "no")} der {(Oar.HeldByHand(XRNode.RightHand) != null ? "SI" : "no")} | "
             : "";
+        Vector3 bow = Vector3.ProjectOnPlane(Ref.forward, Vector3.up).normalized;
         Debug.Log($"[MANO] {oars}grip izq {gripL:F2} der {gripR:F2} | tirar izq {rawL:F2} der {rawR:F2} m/s | " +
-                  $"remada izq {strokeL:F2} der {strokeR:F2} | fuente {srcL}/{srcR}");
+                  $"remada izq {strokeL:F2} der {strokeR:F2} | barca {Vector3.Dot(rb.linearVelocity, bow):F2} m/s | " +
+                  (touching.Count > 0 ? "CHOCA CON: " + string.Join(", ", touching) : "sin choques") + $" | fuente {srcL}/{srcR}");
+        touching.Clear();
     }
 }

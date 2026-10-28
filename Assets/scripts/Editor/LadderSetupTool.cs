@@ -2,6 +2,7 @@ using System.Linq;
 using Unity.XR.CoreUtils;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Locomotion;
 using UnityEngine.XR.Interaction.Toolkit.Locomotion.Teleportation;
 using UnityEngine.XR.Interaction.Toolkit.Locomotion.Turning;
@@ -100,6 +101,13 @@ public class LadderSetupTool : EditorWindow
         for (float y = 0.3f; y < height - 0.05f; y += rungSpacing, n++)
             Piece(root.transform, "Peldano", bottomPos + Vector3.up * y, Quaternion.identity, new Vector3(0.04f, 0.24f, 0.04f), mat, right);
 
+        // Collider + XR Simple Interactable: para apuntar a la escala con el rayo desde lejos (subes solo)
+        var box = root.AddComponent<BoxCollider>();
+        Vector3 ls = root.transform.lossyScale;
+        box.size = new Vector3(0.6f / Mathf.Max(ls.x, 0.0001f), height / Mathf.Max(ls.y, 0.0001f), 0.15f / Mathf.Max(ls.z, 0.0001f));
+        box.center = new Vector3(0f, height * 0.5f / Mathf.Max(ls.y, 0.0001f), 0f);
+        root.AddComponent<XRSimpleInteractable>();
+
         var ladder = root.AddComponent<RopeLadder>();
         ladder.bottom = bottom;
         ladder.top = top;
@@ -115,7 +123,7 @@ public class LadderSetupTool : EditorWindow
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(root.scene);
         Debug.Log($"[ESCALA] Escala creada en el costado del barco pirata: {height:F1} m, {n} peldanos, cubierta a y={deckY:F2}. " +
                   $"Apaga mientras trepas: {string.Join(", ", ladder.disableWhileClimbing.Select(p => p.GetType().Name))}. " +
-                  "Rema hasta ella, agarra con el grip y tira hacia abajo. Guarda (Ctrl+S).");
+                  "Rema hasta ella y agarra con el grip y tira hacia abajo, o apunta desde lejos con el rayo y aprieta el grip. Guarda (Ctrl+S).");
     }
 
     static Transform Empty(string name, Transform parent, Vector3 pos)
