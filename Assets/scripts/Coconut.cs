@@ -11,8 +11,14 @@ public class Coconut : MonoBehaviour
 {
     [Header("Dano")]
     public float damagePerMeterPerSecond = 5f;
-    public float minImpactSpeed = 3f;
+    public float minImpactSpeed = 2f;
     public float maxDamage = 40f;
+    [Tooltip("Contra enemigos (aranas, esqueletos) el coco lanzado hace este multiplo del dano")]
+    public float enemyDamageMultiplier = 2f;
+    [Tooltip("Dano minimo de un coco lanzado contra un enemigo (si va a mas de 'Min Impact Speed')")]
+    public float minEnemyDamage = 15f;
+    [Tooltip("Tope de dano contra enemigos (con 30 de vida, una arana muere de un buen lanzamiento)")]
+    public float maxEnemyDamage = 60f;
 
     [Header("Golpe en la cabeza al caer")]
     public Transform playerHead;
@@ -99,6 +105,8 @@ public class Coconut : MonoBehaviour
             if (h == playerHealth && Time.time - lastGrabTime < 1f) return;
             DamageTarget(h, speed);
         }
+        else if (debugLogs && c.collider.GetComponentInParent<EnemyAI>() != null)
+            Debug.LogWarning($"[COCO] Has dado a '{c.collider.name}' pero no tiene Health: no se le puede hacer dano");
         else if (audioSource != null && hitClip != null) audioSource.PlayOneShot(hitClip, 0.4f);
     }
 
@@ -106,9 +114,11 @@ public class Coconut : MonoBehaviour
     {
         if (!hitThisFlight.Add(h)) return;
         float dmg = Mathf.Min(maxDamage, speed * damagePerMeterPerSecond);
+        bool enemy = h != playerHealth && h.GetComponentInParent<EnemyAI>() != null;
+        if (enemy) dmg = Mathf.Clamp(speed * damagePerMeterPerSecond * enemyDamageMultiplier, minEnemyDamage, maxEnemyDamage);
         if (h.TakeDamage(dmg, gameObject))
         {
-            if (debugLogs) Debug.Log($"[COCO] Impacto a {speed:F1} m/s contra '{h.name}' -> {dmg:F0} de dano");
+            if (debugLogs) Debug.Log($"[COCO] Impacto a {speed:F1} m/s contra '{h.name}' -> {dmg:F0} de dano" + (enemy ? $" (le quedan {h.Current:F0})" : ""));
             if (audioSource != null && hitClip != null) audioSource.PlayOneShot(hitClip);
         }
     }
