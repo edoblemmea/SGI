@@ -102,6 +102,14 @@ public class ShakeablePalm : MonoBehaviour
         if (hiddenKey != null) HangKey();
     }
 
+    /// Esconder una llave en esta palmera desde otro script (KeyItem lo hace si ninguna palmera la tiene)
+    public void HideKey(Transform key)
+    {
+        if (key == null || keyHanging) return;
+        hiddenKey = key;
+        HangKey();
+    }
+
     void HangKey()
     {
         if (crown == null) { Debug.LogWarning($"[PALMERA] '{name}' tiene la llave pero no tiene 'Crown'."); return; }
