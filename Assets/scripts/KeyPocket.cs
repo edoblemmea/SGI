@@ -48,6 +48,7 @@ public class KeyPocket : MonoBehaviour
     bool wasStored;
     float standHeight = 1.5f, yawAngle;
     bool yawReady;
+    Unity.XR.CoreUtils.XROrigin origin;
 
     void Start()
     {
@@ -73,8 +74,10 @@ public class KeyPocket : MonoBehaviour
     void LateUpdate()
     {
         if (head == null) return;
-        // Altura desde el suelo del jugador (Camera Offset), no desde la cabeza: al agacharte el bolsillo no baja contigo
-        float floorY = head.parent != null ? head.parent.position.y : head.position.y - standHeight;
+        // Altura desde el suelo del jugador (la raiz del XR Origin), no desde la cabeza: al agacharte el bolsillo no baja contigo.
+        // Ojo: no vale el Camera Offset, en modo 'Device' esta 1,36 m por encima del suelo
+        if (origin == null) origin = head.GetComponentInParent<Unity.XR.CoreUtils.XROrigin>();
+        float floorY = origin != null ? origin.transform.position.y : head.position.y - standHeight;
         float h = head.position.y - floorY;
         if (h > standHeight) standHeight = Mathf.Min(h, 2.1f);   // tu altura de pie (la mayor medida)
         float hip = hipHeight > 0f ? hipHeight : Mathf.Max(standHeight, 1.2f) * 0.58f;
@@ -135,7 +138,14 @@ public class KeyPocket : MonoBehaviour
     void OnKeyReleased(SelectExitEventArgs a)
     {
         if (a.interactorObject is UnityEngine.XR.Interaction.Toolkit.Interactors.XRSocketInteractor) return;
-        if (Vector3.Distance(key.transform.position, transform.position) < storeRadius) { Store(null); return; }
+        float d = Vector3.Distance(key.transform.position, transform.position);
+        if (d < storeRadius) { Store(null); return; }
+        if (debugLogs && d < 1.5f)
+        {
+            Vector3 rel = transform.InverseTransformPoint(key.transform.position);
+            Debug.Log($"[BOLSILLO] Llave soltada a {d:F2} m del bolsillo (hace falta < {storeRadius:F2}). Estaba {(rel.y > 0 ? "por encima" : "por debajo")} " +
+                      $"{Mathf.Abs(rel.y):F2} m. Bolsillo a {transform.position.y - (origin != null ? origin.transform.position.y : 0f):F2} m del suelo.");
+        }
 
         // Al sacarla del bolsillo el Rigidbody estaba quieto (kinematic): XRI lo restaura asi al soltarla. Que vuelva a caer.
         if (wasStored && keyRb != null)
