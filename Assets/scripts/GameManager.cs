@@ -27,11 +27,11 @@ public class GameManager : MonoBehaviour
 
     [Header("Objetivos (en orden)")]
     public List<Objective> objectives = new List<Objective>
-    {
-        new Objective { id = "llave", description = "Sacude las palmeras y encuentra la llave" },
-        new Objective { id = "barco", description = "Rema hasta el barco fantasma" },
-        new Objective { id = "cofre", description = "Abre el cofre bajo la luna" },
-    };
+  {
+    new Objective { id = "llave", description = "Sacude las palmeras y encuentra la llave" },
+    new Objective { id = "barco", description = "Rema hasta el barco fantasma" },
+    new Objective { id = "cofre", description = "Abre el cofre bajo la luna" },
+  };
 
     [Header("Jugador")]
     [Tooltip("Health del XR Origin: si muere, se pierde la partida")]
@@ -107,9 +107,9 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        // Reiniciar con A o X un segundo despues de acabar
-        if (IsGameOver && Time.time - endTime > 1f &&
-            (XRHandInput.PrimaryButton(XRNode.RightHand) || XRHandInput.PrimaryButton(XRNode.LeftHand)))
+        // Reiniciar con A o X un segundo despues de acabar
+        if (IsGameOver && Time.time - endTime > 1f &&
+      (XRHandInput.PrimaryButton(XRNode.RightHand) || XRHandInput.PrimaryButton(XRNode.LeftHand)))
             Restart();
     }
 

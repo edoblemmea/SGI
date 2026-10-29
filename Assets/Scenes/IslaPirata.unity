@@ -821,6 +821,9 @@ MonoBehaviour:
   testSpeed: 2
   runTest: 1
   spawnMarkers: 1
+  rb: {fileID: 0}
+  renderers: []
+  cam: {fileID: 0}
 --- !u!1 &167757063
 GameObject:
   m_ObjectHideFlags: 0
@@ -1031,12 +1034,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MapMarker
   label: Muelle
   hint: 
-  color: {r: 0.45, g: 0.25, b: 0.1, a: 1}
+  color:
+    r: 0.45
+    g: 0.25
+    b: 0.1
+    a: 1
   discoveredAtStart: 1
   discoverRadius: 8
   hiddenUntilObjective: 
   allowFastTravel: 1
   travelPoint: {fileID: 1560601142}
+  <Discovered>k__BackingField: 0
 --- !u!1 &183254967
 GameObject:
   m_ObjectHideFlags: 0
@@ -1558,17 +1566,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 201989651}
   m_CullTransparentMesh: 1
---- !u!114 &208960992 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 4549647368923028711, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-  m_PrefabInstance: {fileID: 2121841029326022977}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2a821d32300752241927232808dee332, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TreasureMap
 --- !u!1001 &221063908
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3130,12 +3127,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MapMarker
   label: Palmeral
   hint: Escondi la llave en una de estas palmeras
-  color: {r: 0.15, g: 0.45, b: 0.15, a: 1}
+  color:
+    r: 0.15
+    g: 0.45
+    b: 0.15
+    a: 1
   discoveredAtStart: 0
   discoverRadius: 8
   hiddenUntilObjective: 
   allowFastTravel: 1
   travelPoint: {fileID: 360073324}
+  <Discovered>k__BackingField: 0
 --- !u!1001 &412513435
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3416,12 +3418,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MapMarker
   label: Barco fantasma
   hint: Solo se llega remando
-  color: {r: 0.5, g: 0.05, b: 0.05, a: 1}
+  color:
+    r: 0.5
+    g: 0.05
+    b: 0.05
+    a: 1
   discoveredAtStart: 0
   discoverRadius: 15
   hiddenUntilObjective: 
   allowFastTravel: 0
   travelPoint: {fileID: 0}
+  <Discovered>k__BackingField: 0
 --- !u!1001 &514784036
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5087,7 +5094,7 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &804335850
+--- !u!114 &804335854
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -5108,9 +5115,10 @@ MonoBehaviour:
     el cofre para siempre.\nT\xFA te salvaste porque estabas en tierra."
   - "En mi \xFAltimo momento humano te lanc\xE9 la llave.\nLa escondiste de noche
     en una palmera...\npero no recuerdas en cu\xE1l."
-  - "Primero sube al mirador y busca el barco con el catalejo:\nse perdi\xF3 en la
-    niebla."
-  - "Despu\xE9s sacude las palmeras hasta encontrar la llave.\nCuidado: las ara\xF1as
+  - 'El barco fantasma sigue anclado frente a la isla,
+
+    esperando en la niebla.'
+  - "Primero sacude las palmeras hasta encontrar la llave.\nCuidado: las ara\xF1as
     de las rocas despertar\xE1n."
   - "Rema hasta el barco, sube por la escala y abre el cofre...\npero solo bajo la
     luna.\nEl reloj de arena te ayudar\xE1."
@@ -5118,11 +5126,16 @@ MonoBehaviour:
   secondsPerPage: 7
   advanceWithButton: 1
   talkRadius: 4
+  nightDuringStory: 1
+  storyHour: 23
+  moodTransition: 3
+  dayNight: {fileID: 0}
   text: {fileID: 0}
   textHeight: 0.6
-  audioSource: {fileID: 804335849}
-  pageClip: {fileID: 8300000, guid: ad59f5a14b4f049789aa350b9c608f20, type: 3}
+  audioSource: {fileID: 0}
+  pageClip: {fileID: 0}
   voiceClips: []
+  fullStoryClip: {fileID: 8300000, guid: 6afd8239585120444a9257e7616d08fe, type: 3}
   debugLogs: 1
 --- !u!1 &866796934
 GameObject:
@@ -7773,10 +7786,10 @@ PrefabInstance:
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 8915062560822044219, guid: ec3dddadd307d2249af3395e3c93f01e, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 804335850}
+      addedObject: {fileID: 804335849}
     - targetCorrespondingSourceObject: {fileID: 8915062560822044219, guid: ec3dddadd307d2249af3395e3c93f01e, type: 3}
       insertIndex: -1
-      addedObject: {fileID: 804335849}
+      addedObject: {fileID: 804335854}
     - targetCorrespondingSourceObject: {fileID: 2169609959397011691, guid: ec3dddadd307d2249af3395e3c93f01e, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1042144964}
@@ -10623,6 +10636,7 @@ MonoBehaviour:
   loseClip: {fileID: 0}
   ambientWaves: 1
   wavesVolume: 0.25
+  tutorialHints: 1
   onObjectiveCompleted:
     m_PersistentCalls:
       m_Calls: []
@@ -12939,6 +12953,10 @@ MonoBehaviour:
   maxSpeed: 3
   maxAngularSpeed: 0.6
   responsiveness: 0.5
+  buttonManeuvers: 1
+  backPush: 1.2
+  turnStep: 90
+  buttonTurnSpeed: 45
   debugLogs: 1
   haptics: 1
   splashSounds: 1
@@ -14048,7 +14066,6 @@ MonoBehaviour:
   snapTurn: {fileID: 127254564}
   smoothTurn: {fileID: 127254563}
   vignette: {fileID: 7945003}
-  map: {fileID: 208960992}
   dayNight: {fileID: 1518194124}
   allowTimeChange: 1
   timeTransitionSeconds: 4
@@ -14908,103 +14925,6 @@ MonoBehaviour:
   showHandleMarker: 1
   markerSize: 0.07
   debugLogs: 1
---- !u!1001 &2121841029326022977
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 4549647368923028711, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: boat
-      value: 
-      objectReference: {fileID: 1818576491}
-    - target: {fileID: 4549647368923028711, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: head
-      value: 
-      objectReference: {fileID: 2017899785}
-    - target: {fileID: 4549647368923028711, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: xrOrigin
-      value: 
-      objectReference: {fileID: 457136144}
-    - target: {fileID: 4549647368923028711, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: teleportation
-      value: 
-      objectReference: {fileID: 1051598263}
-    - target: {fileID: 6558655865338898241, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_fontColor32.rgba
-      value: 4279050048
-      objectReference: {fileID: 0}
-    - target: {fileID: 6558655865338898241, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_TextStyleHashCode
-      value: -1183493901
-      objectReference: {fileID: 0}
-    - target: {fileID: 6878637995499082201, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_AdditionalShaderChannelsFlag
-      value: 25
-      objectReference: {fileID: 0}
-    - target: {fileID: 7351713931703861341, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_fontColor32.rgba
-      value: 4279048755
-      objectReference: {fileID: 0}
-    - target: {fileID: 7351713931703861341, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_TextStyleHashCode
-      value: -1183493901
-      objectReference: {fileID: 0}
-    - target: {fileID: 7970460961545838896, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -11.394069
-      objectReference: {fileID: 0}
-    - target: {fileID: 7970460961545838896, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 6.494104
-      objectReference: {fileID: 0}
-    - target: {fileID: 7970460961545838896, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 25.986498
-      objectReference: {fileID: 0}
-    - target: {fileID: 7970460961545838896, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 0.9435776
-      objectReference: {fileID: 0}
-    - target: {fileID: 7970460961545838896, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0.25283086
-      objectReference: {fileID: 0}
-    - target: {fileID: 7970460961545838896, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: -0.20657696
-      objectReference: {fileID: 0}
-    - target: {fileID: 7970460961545838896, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0.05535213
-      objectReference: {fileID: 0}
-    - target: {fileID: 7970460961545838896, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7970460961545838896, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 7970460961545838896, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8534902765350602787, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_Name
-      value: Carta
-      objectReference: {fileID: 0}
-    - target: {fileID: 9167471940205651153, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
-      propertyPath: m_TextStyleHashCode
-      value: -1183493901
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: ddc1204716032cd49b794c8fd49befbc, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -15028,7 +14948,6 @@ SceneRoots:
   - {fileID: 412513435}
   - {fileID: 1434945278}
   - {fileID: 1657896942}
-  - {fileID: 2121841029326022977}
   - {fileID: 567703031}
   - {fileID: 1011923190}
   - {fileID: 775646885}
