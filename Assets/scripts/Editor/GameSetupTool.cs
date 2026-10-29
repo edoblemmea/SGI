@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 /// Herramienta de editor: menu "Isla Pirata > Juego".
-/// 1) GameManager con los objetivos (otear, llave, barco, cofre y opcionalmente aranas/esqueletos), vida del jugador,
+/// 1) GameManager con los objetivos (llave, barco, cofre y opcionalmente aranas/esqueletos), vida del jugador,
 ///    musica y jingles del asset AS_Casual_Island_Game_Sounds_FREE.
 /// 2) Barco fantasma: ancla de desembarco en cubierta y zona de llegada en barca (objetivo 'barco').
 /// 3) Interfaz: panel de objetivos en la muneca izquierda, pantalla de fin delante de la camara y velo rojo de dano.
