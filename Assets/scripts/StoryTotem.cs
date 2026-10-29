@@ -64,7 +64,8 @@ public class StoryTotem : MonoBehaviour
     Transform head;
     int page = -1;
     float timer;
-    bool talking, prevButton, moodOn;
+    bool talking, prevButton, moodOn, voiceChecked;
+    float voiceStartedAt;
     float hourBefore;
     float[] pageStart;   // con fullStoryClip: segundo del audio en que empieza cada pagina
 
@@ -76,19 +77,49 @@ public class StoryTotem : MonoBehaviour
         if (text == null) CreateText();
         if (dayNight == null) dayNight = FindAnyObjectByType<DayNightCycle>();
         text.gameObject.SetActive(false);
-        if (FullVoice)
+        if (fullStoryClip != null && audioSource == null)
         {
-            // Reparto del audio entre las paginas segun su longitud de texto
-            pageStart = new float[pages.Length];
-            float total = 0f;
-            foreach (var pg in pages) total += Mathf.Max(1, pg.Length);
-            float acc = 0f;
-            for (int i = 0; i < pages.Length; i++) { pageStart[i] = fullStoryClip.length * acc / total; acc += Mathf.Max(1, pages[i].Length); }
-            audioSource.clip = fullStoryClip;
-            audioSource.loop = false;
+            audioSource = gameObject.AddComponent<AudioSource>();
+            audioSource.playOnAwake = false;
+            audioSource.spatialBlend = 0.5f;
+            Debug.LogWarning("[TOTEM] Hay 'Full Story Clip' pero 'Audio Source' estaba vacio: he creado un AudioSource en el totem.");
         }
-        if (debugLogs) Debug.Log($"[TOTEM] Listo: {pages.Length} paginas" + (FullVoice ? $", voz de {fullStoryClip.length:F0} s" : "") +
+        if (FullVoice) PrepareVoice();
+        else if (debugLogs) Debug.Log("[TOTEM] Sin voz completa: 'Full Story Clip' esta vacio (solo texto" + (voiceClips != null && voiceClips.Length > 0 ? " y voz por pagina)" : ")"));
+        if (debugLogs) Debug.Log($"[TOTEM] Listo: {pages.Length} paginas" + (FullVoice ? $", voz '{fullStoryClip.name}' de {fullStoryClip.length:F0} s" : "") +
                                  $". Acercate a menos de {talkRadius:F0} m para escuchar la historia.");
+    }
+
+    // Reparto del audio entre las paginas segun su longitud de texto, y carga del clip
+    void PrepareVoice()
+    {
+        pageStart = new float[pages.Length];
+        float total = 0f;
+        foreach (var pg in pages) total += Mathf.Max(1, pg.Length);
+        float acc = 0f;
+        for (int i = 0; i < pages.Length; i++) { pageStart[i] = fullStoryClip.length * acc / total; acc += Mathf.Max(1, pages[i].Length); }
+        audioSource.clip = fullStoryClip;
+        audioSource.loop = false;
+        if (fullStoryClip.loadState == AudioDataLoadState.Unloaded) fullStoryClip.LoadAudioData();
+        string problems = VoiceProblems();
+        if (problems.Length > 0) Debug.LogWarning("[TOTEM] La voz puede no oirse:" + problems);
+    }
+
+    // Motivos tipicos por los que no se oye la voz (se escriben en la Console)
+    string VoiceProblems()
+    {
+        string p = "";
+        if (!audioSource.enabled) p += "\n - el componente AudioSource esta desactivado";
+        if (audioSource.mute) p += "\n - el AudioSource tiene 'Mute' marcado";
+        if (audioSource.volume < 0.05f) p += $"\n - el volumen del AudioSource es {audioSource.volume:F2}";
+        if (AudioListener.volume < 0.05f) p += $"\n - el volumen general es {AudioListener.volume:F2} (menu de la muneca > Volumen, se guarda entre partidas)";
+        if (AudioListener.pause) p += "\n - el audio del juego esta en pausa (AudioListener.pause)";
+        var listener = FindAnyObjectByType<AudioListener>();
+        if (listener == null) p += "\n - no hay ningun AudioListener activo en la escena (debe estar en la Main Camera)";
+        else if (audioSource.spatialBlend > 0.01f && Vector3.Distance(listener.transform.position, transform.position) > audioSource.maxDistance)
+            p += $"\n - el oyente esta mas lejos que 'Max Distance' ({audioSource.maxDistance:F0} m)";
+        if (fullStoryClip.loadState == AudioDataLoadState.Failed) p += $"\n - el audio '{fullStoryClip.name}' no se ha podido cargar (revisa su Import Settings)";
+        return p;
     }
 
     void CreateText()
@@ -121,8 +152,13 @@ public class StoryTotem : MonoBehaviour
             if (Finished) { Finished = false; page = -1; }   // volver a escucharla
             if (FullVoice)
             {
-                if (page < 0) { page = 0; audioSource.time = 0f; audioSource.Play(); Show(); }
+                if (pageStart == null || audioSource.clip != fullStoryClip) PrepareVoice();   // clip asignado durante el Play
+                if (page < 0) { page = 0; audioSource.Stop(); audioSource.Play(); Show(); }
                 else { audioSource.UnPause(); Show(); }
+                voiceStartedAt = Time.time;
+                voiceChecked = false;
+                if (debugLogs) Debug.Log($"[TOTEM] Voz: reproduciendo '{fullStoryClip.name}' (carga: {fullStoryClip.loadState}, volumen {audioSource.volume:F2}, " +
+                                         $"volumen general {AudioListener.volume:F2}, isPlaying {audioSource.isPlaying})");
             }
             else if (page < 0) NextPage(); else Show();
             BeginMood();
@@ -159,7 +195,20 @@ public class StoryTotem : MonoBehaviour
             if (page + 1 >= pages.Length) { EndStory(); return; }
             audioSource.time = Mathf.Min(pageStart[page + 1], fullStoryClip.length - 0.05f);
         }
-        if (!audioSource.isPlaying) { EndStory(); return; }   // el audio ha terminado
+        if (!voiceChecked && Time.time - voiceStartedAt > 1.5f)
+        {
+            voiceChecked = true;
+            if (audioSource.isPlaying && audioSource.time > 0.1f) { if (debugLogs) Debug.Log($"[TOTEM] Voz OK: va por el segundo {audioSource.time:F1}"); }
+            else Debug.LogWarning($"[TOTEM] La voz NO avanza (isPlaying {audioSource.isPlaying}, segundo {audioSource.time:F1}, carga {fullStoryClip.loadState})." + VoiceProblems());
+        }
+        if (!audioSource.isPlaying)
+        {
+            // Recien lanzado o aun cargando el mp3: esperar, no dar la historia por acabada
+            if (fullStoryClip.loadState != AudioDataLoadState.Loaded && fullStoryClip.loadState != AudioDataLoadState.Failed) return;
+            if (Time.time - voiceStartedAt < 1f) return;
+            EndStory();   // el audio ha terminado
+            return;
+        }
         int p = 0;
         for (int i = 0; i < pageStart.Length; i++) if (audioSource.time >= pageStart[i]) p = i;
         if (p != page) { page = p; Show(); XRHandInput.HapticBoth(0.1f, 0.04f); }
