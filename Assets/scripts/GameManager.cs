@@ -54,6 +54,8 @@ public class GameManager : MonoBehaviour
     [Tooltip("Olas del mar de fondo (generadas por codigo) durante toda la partida")]
     public bool ambientWaves = true;
     [Range(0f, 1f)] public float wavesVolume = 0.25f;
+    [Tooltip("Pistas de controles en contexto (TutorialHints): se crean solas al empezar")]
+    public bool tutorialHints = true;
 
     [Header("Eventos")]
     public UnityEvent<string> onObjectiveCompleted;
@@ -89,6 +91,8 @@ public class GameManager : MonoBehaviour
     {
         if (debugLogs) Debug.Log($"[JUEGO] Partida empezada con {objectives.Count} objetivos. playerHealth={(playerHealth != null ? playerHealth.name : "NULL (no se podra perder)")}");
         RefreshUI();
+        if (tutorialHints && FindAnyObjectByType<TutorialHints>() == null)
+            new GameObject("Pistas de controles").AddComponent<TutorialHints>();
         if (ambientWaves)
         {
             var src = new GameObject("Olas (ambiente)").AddComponent<AudioSource>();

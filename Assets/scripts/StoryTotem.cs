@@ -16,7 +16,7 @@ public class StoryTotem : MonoBehaviour
         "Encontramos un cofre maldito.\nLa leyenda decía que solo podía abrirse bajo la luna...\npero yo lo abrí a mediodía.",
         "Toda la tripulación se convirtió en esqueletos,\ncondenados a vigilar el cofre para siempre.\nTú te salvaste porque estabas en tierra.",
         "En mi último momento humano te lancé la llave.\nLa escondiste de noche en una palmera...\npero no recuerdas en cuál.",
-        "Primero sube al mirador y busca el barco con el catalejo:\nse perdió en la niebla.",
+        "El barco fantasma sigue anclado frente a la isla,\nesperando en la niebla.",
         "Después sacude las palmeras hasta encontrar la llave.\nCuidado: las arañas de las rocas despertarán.",
         "Rema hasta el barco, sube por la escala y abre el cofre...\npero solo bajo la luna.\nEl reloj de arena te ayudará.",
         "Libéranos, grumete.\nSolo tú puedes romper la maldición.",
@@ -46,6 +46,8 @@ public class StoryTotem : MonoBehaviour
     public bool debugLogs = true;
 
     public bool Finished { get; private set; }
+    /// Esta contando la historia ahora mismo (las pistas de controles esperan a que termine)
+    public bool IsTalking => talking;
 
     Transform head;
     int page = -1;

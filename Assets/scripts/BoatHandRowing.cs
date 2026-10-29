@@ -44,6 +44,16 @@ public class BoatHandRowing : MonoBehaviour
     public float maxAngularSpeed = 0.8f;
     [Range(0.05f, 1f)] public float responsiveness = 0.5f;   // 1 = sin suavizado
 
+    [Header("Maniobras con botones (sin espacio para remar)")]
+    [Tooltip("B = empujon hacia atras; A = girar a la derecha; X = girar a la izquierda (dos veces = 180)")]
+    public bool buttonManeuvers = true;
+    [Tooltip("Velocidad hacia atras que da cada empujon con B (m/s)")]
+    public float backPush = 1.2f;
+    [Tooltip("Grados que gira cada pulsacion de A / X")]
+    public float turnStep = 90f;
+    [Tooltip("Velocidad del giro con botones (grados/s): despacio marea menos")]
+    public float buttonTurnSpeed = 45f;
+
     [Header("Diagnostico")]
     public bool debugLogs = true;
     public bool haptics = true;
@@ -55,6 +65,8 @@ public class BoatHandRowing : MonoBehaviour
     Vector3 prevL, prevR;
     bool hasPrev, wasHeldL, wasHeldR, warned;
     float pullL, pullR, strokeL, strokeR, rawL, rawR, gripL, gripR, logTimer, notBoardTimer;
+    bool prevA, prevB, prevX, turning;
+    float turnTarget;   // rumbo (grados) al que gira con A / X
     string srcL = "-", srcR = "-";
     readonly System.Collections.Generic.HashSet<string> touching = new System.Collections.Generic.HashSet<string>();
 
@@ -93,9 +105,12 @@ public class BoatHandRowing : MonoBehaviour
                                  (head == null ? "Ademas no encuentro la camara (Main Camera)." : ""));
             }
             ResetState();
+            turning = false;
+            prevA = prevB = prevX = true;   // que no cuente un boton que ya estaba pulsado al embarcar
             return;
         }
         notBoardTimer = 0f;
+        if (buttonManeuvers) ReadManeuverButtons();
 
         Vector3 wl, wr;
         bool okL = TryHand(XRNode.LeftHand, leftHandFallback, out wl, out srcL);
@@ -173,9 +188,51 @@ public class BoatHandRowing : MonoBehaviour
         if (debugLogs) Log(heldL || heldR, dt);
     }
 
+    // A / X / B: botones que no se usan para remar (remar = grip + mover las manos)
+    void ReadManeuverButtons()
+    {
+        bool a = XRHandInput.PrimaryButton(XRNode.RightHand);
+        bool b = XRHandInput.SecondaryButton(XRNode.RightHand);
+        bool x = XRHandInput.PrimaryButton(XRNode.LeftHand);
+        Vector3 bow = Vector3.ProjectOnPlane(Ref.forward, Vector3.up).normalized;
+
+        if (b && !prevB)
+        {
+            rb.AddForce(-bow * backPush, ForceMode.VelocityChange);   // empujon hacia atras
+            XRHandInput.HapticBoth(0.4f, 0.1f);
+            ProceduralSounds.Play(ProceduralSounds.Splash(), transform.position, 0.8f);
+            if (debugLogs) Debug.Log("[MANO] Boton B: empujon hacia atras");
+        }
+        if ((a && !prevA) || (x && !prevX))
+        {
+            float sign = a && !prevA ? 1f : -1f;   // A = derecha, X = izquierda
+            float yaw = Mathf.Atan2(bow.x, bow.z) * Mathf.Rad2Deg;
+            turnTarget = (turning ? turnTarget : yaw) + sign * turnStep;   // pulsar otra vez mientras gira = 180
+            turning = true;
+            XRHandInput.Haptic(sign > 0f ? XRNode.RightHand : XRNode.LeftHand, 0.4f, 0.1f);
+            if (debugLogs) Debug.Log($"[MANO] Boton {(sign > 0f ? "A" : "X")}: giro {turnStep:F0} grados a la {(sign > 0f ? "derecha" : "izquierda")}");
+        }
+        prevA = a; prevB = b; prevX = x;
+    }
+
     void FixedUpdate()
     {
         if (!OnBoard) return;
+
+        // Giro con botones: hasta el rumbo pedido, a velocidad constante (el rumbo es el de BowRef, la proa)
+        if (turning)
+        {
+            Vector3 bowNow = Vector3.ProjectOnPlane(Ref.forward, Vector3.up).normalized;
+            float yaw = Mathf.Atan2(bowNow.x, bowNow.z) * Mathf.Rad2Deg;
+            float left = Mathf.DeltaAngle(yaw, turnTarget);
+            if (Mathf.Abs(left) < 0.5f) { turning = false; rb.angularVelocity = Vector3.zero; }
+            else
+            {
+                float step = Mathf.Clamp(left, -buttonTurnSpeed * Time.fixedDeltaTime, buttonTurnSpeed * Time.fixedDeltaTime);
+                rb.MoveRotation(Quaternion.AngleAxis(step, Vector3.up) * rb.rotation);
+                rb.angularVelocity = Vector3.zero;
+            }
+        }
 
         float l = Weigh(strokeL);
         float r = Weigh(strokeR);

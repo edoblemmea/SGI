@@ -94,7 +94,6 @@ public class WristMenuSetupTool : EditorWindow
         menu.vignette = vignette;
         menu.dayNight = FindAnyObjectByType<DayNightCycle>(FindObjectsInactive.Include);
         menu.allowTimeChange = allowTimeChange;
-        menu.map = FindAnyObjectByType<TreasureMap>(FindObjectsInactive.Include);
 
         float y = 162f;
         menu.moveButton = Btn(cgo.transform, "Movimiento", new Vector2(0, y), 290); y -= 44;
@@ -102,7 +101,6 @@ public class WristMenuSetupTool : EditorWindow
         menu.snapButton = Btn(cgo.transform, "Salto de giro", new Vector2(0, y), 290); y -= 44;
         menu.speedButton = Btn(cgo.transform, "Velocidad", new Vector2(0, y), 290); y -= 44;
         menu.vignetteButton = Btn(cgo.transform, "Vineta", new Vector2(0, y), 290); y -= 44;
-        menu.travelButton = Btn(cgo.transform, "Viaje carta", new Vector2(0, y), 290); y -= 44;
         menu.timeButton = Btn(cgo.transform, "Hora", new Vector2(0, y), 290); y -= 44;
         menu.volumeDownButton = Btn(cgo.transform, "Volumen -", new Vector2(-115, y), 60, "-");
         menu.volumeUpButton = Btn(cgo.transform, "Volumen +", new Vector2(115, y), 60, "+");
@@ -119,7 +117,7 @@ public class WristMenuSetupTool : EditorWindow
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(root.scene);
         Debug.Log($"[MENU] Menu creado en '{parent.name}'. Managers izq {(left != null ? left.name : "FALTA")} der {(right != null ? right.name : "FALTA")}, " +
                   $"move {(move != null ? "ok" : "FALTA")}, snap {(snap != null ? "ok" : "FALTA")}, giro suave {(smooth != null ? "ok" : "FALTA")}, " +
-                  $"vineta {(vignette != null ? "ok" : "FALTA")}, carta {(menu.map != null ? "ok" : "FALTA (Isla Pirata > Carta)")}, dia/noche {(menu.dayNight != null ? "ok" : "FALTA (Isla Pirata > Maldicion)")}. Guarda (Ctrl+S).");
+                  $"vineta {(vignette != null ? "ok" : "FALTA")}, dia/noche {(menu.dayNight != null ? "ok" : "FALTA (Isla Pirata > Maldicion)")}. Guarda (Ctrl+S).");
     }
 
     // ------------------------------------------------------------------ vineta

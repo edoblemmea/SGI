@@ -12,7 +12,6 @@ using UnityEngine.XR.Interaction.Toolkit.Samples.StarterAssets;
 ///  - Movimiento: teletransporte o continuo (joystick izquierdo). El joystick derecho siempre teletransporta,
 ///    porque hace falta para subir y bajar de la barca.
 ///  - Giro por saltos o suave, grados del salto, velocidad al andar, vineta de confort.
-///  - Viaje con la carta: teletransporte o deslizarse hasta el lugar.
 ///  - Hora del dia (dia <-> noche), volumen y reiniciar (pide confirmacion).
 /// Las opciones se guardan en este dispositivo (PlayerPrefs). Lo monta "Isla Pirata > Menu muneca".
 public class WristMenu : MonoBehaviour
@@ -33,8 +32,6 @@ public class WristMenu : MonoBehaviour
     public ContinuousTurnProvider smoothTurn;
     [Tooltip("Tunneling Vignette (hijo de Main Camera)")]
     public TunnelingVignetteController vignette;
-    [Tooltip("La carta: su modo de viaje (teletransporte / deslizarse)")]
-    public TreasureMap map;
 
     [Header("Control de la partida")]
     public DayNightCycle dayNight;
@@ -56,6 +53,7 @@ public class WristMenu : MonoBehaviour
     public Button snapButton;
     public Button speedButton;
     public Button vignetteButton;
+    [Tooltip("Boton del antiguo 'Viaje con la carta' (la carta se quito): se oculta al empezar")]
     public Button travelButton;
     public Button timeButton;
     public Button volumeDownButton;
@@ -67,7 +65,7 @@ public class WristMenu : MonoBehaviour
     [Header("Diagnostico")]
     public bool debugLogs = true;
 
-    bool smoothMove, smoothTurnOn, vignetteOn = true, glideTravel;
+    bool smoothMove, smoothTurnOn, vignetteOn = true;
     int snapIndex = 1, speedIndex = 1;
     float volume = 1f, restartTimer, refreshTimer;
     bool prevY;
@@ -83,7 +81,7 @@ public class WristMenu : MonoBehaviour
         Bind(snapButton, () => { snapIndex = (snapIndex + 1) % snapAngles.Length; Changed($"Salto de giro {snapAngles[snapIndex]:F0} grados"); });
         Bind(speedButton, () => { speedIndex = (speedIndex + 1) % moveSpeeds.Length; Changed($"Velocidad {moveSpeeds[speedIndex]:F1} m/s"); });
         Bind(vignetteButton, () => { vignetteOn = !vignetteOn; Changed("Vineta " + (vignetteOn ? "SI" : "NO")); });
-        Bind(travelButton, () => { glideTravel = !glideTravel; Changed("Viaje con la carta: " + (glideTravel ? "deslizarse" : "teletransporte")); });
+        if (travelButton != null) travelButton.gameObject.SetActive(false);   // la carta se quito
         Bind(volumeDownButton, () => { volume = Mathf.Clamp01(volume - volumeStep); Changed($"Volumen {volume * 100f:F0} %"); });
         Bind(volumeUpButton, () => { volume = Mathf.Clamp01(volume + volumeStep); Changed($"Volumen {volume * 100f:F0} %"); });
         Bind(timeButton, ToggleTime);
@@ -96,7 +94,7 @@ public class WristMenu : MonoBehaviour
 
         if (debugLogs)
             Debug.Log($"[MENU] Listo. Y = abrir/cerrar. Managers izq {Name(leftHandManager)} der {Name(rightHandManager)} | " +
-                      $"carta {Name(map)} | move {Name(moveProvider)} | snap {Name(snapTurn)} | suave {Name(smoothTurn)} | vineta {Name(vignette)} | dia/noche {Name(dayNight)}");
+                      $"move {Name(moveProvider)} | snap {Name(snapTurn)} | suave {Name(smoothTurn)} | vineta {Name(vignette)} | dia/noche {Name(dayNight)}");
         if (leftHandManager == null) Debug.LogWarning("[MENU] Falta 'Left Hand Manager': no se podra cambiar a movimiento continuo. Usa Isla Pirata > Menu muneca.");
     }
 
@@ -160,7 +158,6 @@ public class WristMenu : MonoBehaviour
         if (snapTurn != null) snapIndex = Closest(snapAngles, snapTurn.turnAmount);
         if (moveProvider != null) speedIndex = Closest(moveSpeeds, moveProvider.moveSpeed);
         if (vignette != null) vignetteOn = vignette.gameObject.activeSelf;
-        if (map != null) glideTravel = map.glideTravel;
         volume = AudioListener.volume;
         if (debugLogs) Debug.Log($"[MENU] Valores de la escena: movimiento {(smoothMove ? "continuo" : "teletransporte")}, giro {(smoothTurnOn ? "suave" : "por saltos")}");
     }
@@ -183,7 +180,6 @@ public class WristMenu : MonoBehaviour
         if (snapTurn != null && snapAngles.Length > 0) snapTurn.turnAmount = snapAngles[Mathf.Clamp(snapIndex, 0, snapAngles.Length - 1)];
         if (moveProvider != null && moveSpeeds.Length > 0) moveProvider.moveSpeed = moveSpeeds[Mathf.Clamp(speedIndex, 0, moveSpeeds.Length - 1)];
         if (vignette != null) vignette.gameObject.SetActive(vignetteOn);
-        if (map != null) map.glideTravel = glideTravel;
         AudioListener.volume = volume;
     }
 
@@ -217,8 +213,6 @@ public class WristMenu : MonoBehaviour
         string speed = speedIndex < speedNames.Length ? speedNames[speedIndex] : $"{moveSpeeds[speedIndex]:F1} m/s";
         Label(speedButton, "Velocidad: " + speed);
         Label(vignetteButton, "Viñeta de confort: " + (vignetteOn ? "Sí" : "No"));
-        Label(travelButton, "Viaje con la carta: " + (glideTravel ? "Deslizarse" : "Teletransporte"));
-        if (travelButton != null) travelButton.interactable = map != null;
         if (volumeText != null) volumeText.text = $"Volumen {volume * 100f:F0} %";
 
         if (timeButton != null)
@@ -248,7 +242,6 @@ public class WristMenu : MonoBehaviour
             smoothMove = PlayerPrefs.GetInt(Prefix + "smoothMove", smoothMove ? 1 : 0) == 1;
             smoothTurnOn = PlayerPrefs.GetInt(Prefix + "smoothTurn", smoothTurnOn ? 1 : 0) == 1;
             vignetteOn = PlayerPrefs.GetInt(Prefix + "vignette", vignetteOn ? 1 : 0) == 1;
-            glideTravel = PlayerPrefs.GetInt(Prefix + "glide", map != null && map.glideTravel ? 1 : 0) == 1;
             snapIndex = Mathf.Clamp(PlayerPrefs.GetInt(Prefix + "snap", snapIndex), 0, Mathf.Max(0, snapAngles.Length - 1));
             speedIndex = Mathf.Clamp(PlayerPrefs.GetInt(Prefix + "speed", speedIndex), 0, Mathf.Max(0, moveSpeeds.Length - 1));
             volume = Mathf.Clamp01(PlayerPrefs.GetFloat(Prefix + "volume", volume));
@@ -264,7 +257,6 @@ public class WristMenu : MonoBehaviour
             PlayerPrefs.SetInt(Prefix + "smoothMove", smoothMove ? 1 : 0);
             PlayerPrefs.SetInt(Prefix + "smoothTurn", smoothTurnOn ? 1 : 0);
             PlayerPrefs.SetInt(Prefix + "vignette", vignetteOn ? 1 : 0);
-            PlayerPrefs.SetInt(Prefix + "glide", glideTravel ? 1 : 0);
             PlayerPrefs.SetInt(Prefix + "snap", snapIndex);
             PlayerPrefs.SetInt(Prefix + "speed", speedIndex);
             PlayerPrefs.SetFloat(Prefix + "volume", volume);
@@ -279,7 +271,7 @@ public class WristMenu : MonoBehaviour
     [ContextMenu("Borrar opciones guardadas")]
     void ClearSaved()
     {
-        foreach (var k in new[] { "smoothMove", "smoothTurn", "vignette", "glide", "snap", "speed", "volume" }) PlayerPrefs.DeleteKey(Prefix + k);
+        foreach (var k in new[] { "smoothMove", "smoothTurn", "vignette", "snap", "speed", "volume" }) PlayerPrefs.DeleteKey(Prefix + k);
         Debug.Log("[MENU] Opciones guardadas borradas");
     }
 }

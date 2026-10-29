@@ -167,6 +167,7 @@ Estado: **todo el código está escrito y compila** (comprobado con el Roslyn de
 - Lo monta *Isla Pirata > Llave y cofre*.
 
 ### 5.2 Barca y remo
+- **Maniobras con botones** (`BoatHandRowing.buttonManeuvers`, 29/10): **B** = empujón hacia atrás (`backPush`), **A / X** = girar 90° derecha / izquierda (`turnStep`) a `buttonTurnSpeed` (45°/s) con `MoveRotation`; pulsar otra vez mientras gira = 180°. Para cuando no hay sitio para remar.
 Arquitectura:
 - **La barca es un `Rigidbody` dinámico** (no kinematic), gravedad off, constraints: congelar Position Y y Rotation X/Z, masa ≈ 100. Se mueve con fuerzas (`ForceMode.Acceleration`) hacia la proa (`BowRef.forward` proyectado en horizontal).
 - **Embarcar:**
@@ -280,6 +281,9 @@ Scripts:
 - Un `TotemMaldito` a 2,5 m del inicio (`PlayerStart` o el ancla del muelle), mirando al jugador: el **capitán Calavera, atrapado en el tótem**, cuenta la historia (8 páginas en `pages`) al acercarte a menos de `talkRadius` (4 m).
 - Texto TMP flotando sobre el tótem (se crea solo); cada página dura `secondsPerPage` (7 s) o pasa con A / X. Si te alejas se calla y luego sigue. `voiceClips` opcional (voz grabada por página). Prefijo `[TOTEM]`.
 
+### 5.5d Pistas de controles (`TutorialHints`)
+- Las crea solo el `GameManager` al empezar (`tutorialHints`). Cada pista sale **una vez**, en contexto (andar, menú Y, palmera, llave, bolsillo, espada, arañas, barca, remar, bajar, escala, cofre, reloj, daño), flotando por debajo de la vista con seguimiento suave; espera a que el tótem termine (`StoryTotem.IsTalking`). Busca los objetos por tipo. Prefijo `[PISTAS]`.
+
 ### 5.5a Rescate del jugador (`PlayerRescue`, *Isla Pirata > Rescate del jugador*)
 - Caer al **mar** (origen por debajo de `waterLevel - underWater` durante 1,5 s) → vuelves al asiento de la barca (`anclaBarco`) y embarcas. No hay natación en la historia.
 - Caer a la **bodega** del barco pirata (dentro de sus bounds y 1,2 m por debajo de la cubierta) → vuelves a `deckPoint`.
@@ -306,6 +310,9 @@ Scripts:
 ### 5.7 Sonidos (`ProceduralSounds`, clase estática)
 - El asset `AS_Casual_Island_Game_Sounds_FREE` solo tiene 17 sonidos con nombres genéricos. Los que faltan se **generan por código** y se usan **solo si el campo de sonido del script está vacío**: chapoteo del remo (`BoatHandRowing.splashSounds`), siseo de araña / huesos de esqueleto (`EnemyAI`: al verte, atacar, recibir daño y morir; según la altura del collider), golpe del coco, zumbido y tajo de la espada, crujido + campanas al abrir el cofre y *clonc* si es de día, arena del reloj, campanas de objetivo, victoria y derrota (`GameManager`), siseo al salir del nido, *cling* de la llave (`ShakeablePalm`) y olas de fondo (`GameManager.ambientWaves`).
 - `ProceduralSounds.Play(clip, pos)` crea un AudioSource temporal (3D a medias).
+
+### 5.8 Quitado el 29/10: carta y catalejo
+- Se borraron `TreasureMap`, `MapMarker`, `GuidedTravel`, `Telescope`, `MapSetupTool`, `TelescopeSetupTool`, `Carta.prefab` y `MapaIsla.png`. El objetivo `otear` ya no existe. Ojo: **el requisito de escalado** lo cumplía la carta; hay que cubrirlo con otro objeto.
 
 ## 6. Lecciones aprendidas (errores que ya pasaron)
 
