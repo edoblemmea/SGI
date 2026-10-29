@@ -279,7 +279,7 @@ Scripts:
 
 ### 5.5c Tótem narrador (`StoryTotem`, *Isla Pirata > Totem narrador*)
 - Un `TotemMaldito` a 2,5 m del inicio (`PlayerStart` o el ancla del muelle), mirando al jugador: el **capitán Calavera, atrapado en el tótem**, cuenta la historia (8 páginas en `pages`) al acercarte a menos de `talkRadius` (4 m).
-- Texto TMP flotando sobre el tótem (se crea solo); cada página dura `secondsPerPage` (7 s) o pasa con A / X. Si te alejas se calla y luego sigue. `voiceClips` opcional (voz grabada por página). Prefijo `[TOTEM]`.
+- Texto TMP flotando sobre el tótem (se crea solo); cada página dura `secondsPerPage` (7 s) o pasa con X. Si te alejas se calla y luego sigue. `voiceClips` opcional (voz por página) o **`fullStoryClip`** (toda la historia en un audio: `Assets/Audio/Historia/Historia_completa.mp3`; las páginas se sincronizan repartiendo el audio según la longitud del texto; al alejarse se pausa). `nightDuringStory`: mientras habla anochece (`storyHour` 23 h) y al acabar o alejarse vuelve la hora de antes. Prefijo `[TOTEM]`.
 
 ### 5.5d Pistas de controles (`TutorialHints`)
 - Las crea solo el `GameManager` al empezar (`tutorialHints`). Cada pista sale **una vez**, en contexto (andar, menú Y, palmera, llave, bolsillo, espada, arañas, barca, remar, bajar, escala, cofre, reloj, daño), flotando por debajo de la vista con seguimiento suave; espera a que el tótem termine (`StoryTotem.IsTalking`). Busca los objetos por tipo. Prefijo `[PISTAS]`.

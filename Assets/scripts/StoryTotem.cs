@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.XR;
 
 /// Totem que cuenta la historia (la voz del capitan Calavera, atrapada en el). Al acercarte empieza a hablar:
-/// el texto aparece flotando sobre el totem, pagina a pagina. Pasa solo cada 'secondsPerPage' o con A / X.
+/// el texto aparece flotando sobre el totem, pagina a pagina. Pasa solo cada 'secondsPerPage' o con X.
 /// Si te alejas se calla y, al volver, sigue donde lo dejo. Al terminar se puede volver a escuchar acercandose otra vez.
 /// Lo monta "Isla Pirata > Totem narrador".
 public class StoryTotem : MonoBehaviour
@@ -23,12 +23,21 @@ public class StoryTotem : MonoBehaviour
     };
     [Tooltip("Segundos que se queda cada pagina (luego pasa sola)")]
     public float secondsPerPage = 7f;
-    [Tooltip("Pasar de pagina con A (mando derecho) o X (izquierdo)")]
+    [Tooltip("Pasar de pagina con X (mando izquierdo)")]
     public bool advanceWithButton = true;
 
     [Header("Cuando habla")]
     [Tooltip("Empieza a hablar al acercarte a menos de esta distancia (m)")]
     public float talkRadius = 4f;
+
+    [Header("Ambiente")]
+    [Tooltip("Mientras habla el capitan se hace de noche (mas misterio); al terminar o al alejarte vuelve la hora que habia")]
+    public bool nightDuringStory = true;
+    [Range(0f, 24f)] public float storyHour = 23f;
+    [Tooltip("Segundos que tarda en anochecer / amanecer")]
+    public float moodTransition = 3f;
+    [Tooltip("Ciclo dia/noche. Vacio = se busca solo")]
+    public DayNightCycle dayNight;
 
     [Header("Texto")]
     [Tooltip("Texto donde se escribe. Vacio = se crea uno flotando sobre el totem")]
@@ -41,6 +50,9 @@ public class StoryTotem : MonoBehaviour
     public AudioClip pageClip;
     [Tooltip("Voz grabada para cada pagina (mismo orden que 'Pages'); si la hay, la pagina dura lo que dure el audio")]
     public AudioClip[] voiceClips;
+    [Tooltip("Voz de TODA la historia en un solo audio. Si se pone, el texto va sincronizado con ella: cada pagina dura " +
+             "una parte del audio proporcional a lo larga que es. Tiene prioridad sobre 'Voice Clips'")]
+    public AudioClip fullStoryClip;
 
     [Header("Diagnostico")]
     public bool debugLogs = true;
@@ -52,14 +64,31 @@ public class StoryTotem : MonoBehaviour
     Transform head;
     int page = -1;
     float timer;
-    bool talking, prevButton;
+    bool talking, prevButton, moodOn;
+    float hourBefore;
+    float[] pageStart;   // con fullStoryClip: segundo del audio en que empieza cada pagina
+
+    bool FullVoice => fullStoryClip != null && audioSource != null;
 
     void Start()
     {
         if (Camera.main != null) head = Camera.main.transform;
         if (text == null) CreateText();
+        if (dayNight == null) dayNight = FindAnyObjectByType<DayNightCycle>();
         text.gameObject.SetActive(false);
-        if (debugLogs) Debug.Log($"[TOTEM] Listo: {pages.Length} paginas. Acercate a menos de {talkRadius:F0} m para escuchar la historia.");
+        if (FullVoice)
+        {
+            // Reparto del audio entre las paginas segun su longitud de texto
+            pageStart = new float[pages.Length];
+            float total = 0f;
+            foreach (var pg in pages) total += Mathf.Max(1, pg.Length);
+            float acc = 0f;
+            for (int i = 0; i < pages.Length; i++) { pageStart[i] = fullStoryClip.length * acc / total; acc += Mathf.Max(1, pages[i].Length); }
+            audioSource.clip = fullStoryClip;
+            audioSource.loop = false;
+        }
+        if (debugLogs) Debug.Log($"[TOTEM] Listo: {pages.Length} paginas" + (FullVoice ? $", voz de {fullStoryClip.length:F0} s" : "") +
+                                 $". Acercate a menos de {talkRadius:F0} m para escuchar la historia.");
     }
 
     void CreateText()
@@ -90,14 +119,21 @@ public class StoryTotem : MonoBehaviour
         {
             talking = true;
             if (Finished) { Finished = false; page = -1; }   // volver a escucharla
-            if (page < 0) NextPage(); else Show();
+            if (FullVoice)
+            {
+                if (page < 0) { page = 0; audioSource.time = 0f; audioSource.Play(); Show(); }
+                else { audioSource.UnPause(); Show(); }
+            }
+            else if (page < 0) NextPage(); else Show();
+            BeginMood();
             if (debugLogs) Debug.Log("[TOTEM] El capitan empieza a hablar");
         }
         else if (talking && dist > talkRadius + 3f)
         {
             talking = false;
             text.gameObject.SetActive(false);
-            if (audioSource != null) audioSource.Stop();
+            if (audioSource != null) { if (FullVoice) audioSource.Pause(); else audioSource.Stop(); }
+            EndMood();
             if (debugLogs) Debug.Log("[TOTEM] Te alejas: el capitan se calla");
         }
         if (!talking) return;
@@ -106,11 +142,53 @@ public class StoryTotem : MonoBehaviour
         var tt = text.transform;
         tt.rotation = Quaternion.LookRotation(tt.position - head.position);
 
-        timer -= Time.deltaTime;
-        bool button = advanceWithButton && (XRHandInput.PrimaryButton(XRNode.RightHand) || XRHandInput.PrimaryButton(XRNode.LeftHand));
+        bool button = advanceWithButton && XRHandInput.PrimaryButton(XRNode.LeftHand);   // solo X (mando izquierdo)
         bool pressed = button && !prevButton;
         prevButton = button;
+
+        if (FullVoice) { UpdateFullVoice(pressed); return; }
+        timer -= Time.deltaTime;
         if (timer <= 0f || pressed) NextPage();
+    }
+
+    // Con la voz de toda la historia: la pagina la marca el punto del audio; X salta a la siguiente
+    void UpdateFullVoice(bool pressed)
+    {
+        if (pressed)
+        {
+            if (page + 1 >= pages.Length) { EndStory(); return; }
+            audioSource.time = Mathf.Min(pageStart[page + 1], fullStoryClip.length - 0.05f);
+        }
+        if (!audioSource.isPlaying) { EndStory(); return; }   // el audio ha terminado
+        int p = 0;
+        for (int i = 0; i < pageStart.Length; i++) if (audioSource.time >= pageStart[i]) p = i;
+        if (p != page) { page = p; Show(); XRHandInput.HapticBoth(0.1f, 0.04f); }
+    }
+
+    void EndStory()
+    {
+        Finished = true;
+        talking = false;
+        text.gameObject.SetActive(false);
+        if (audioSource != null) audioSource.Stop();
+        EndMood();
+        if (debugLogs) Debug.Log("[TOTEM] Fin de la historia");
+    }
+
+    // Anochecer mientras habla y volver a la hora de antes al acabar
+    void BeginMood()
+    {
+        if (!nightDuringStory || dayNight == null || moodOn) return;
+        moodOn = true;
+        hourBefore = dayNight.hour;
+        dayNight.TransitionTo(storyHour, moodTransition);
+    }
+
+    void EndMood()
+    {
+        if (!moodOn || dayNight == null) return;
+        moodOn = false;
+        dayNight.TransitionTo(hourBefore, moodTransition);
     }
 
     void NextPage()
@@ -121,6 +199,7 @@ public class StoryTotem : MonoBehaviour
             Finished = true;
             talking = false;
             text.gameObject.SetActive(false);
+            EndMood();
             if (debugLogs) Debug.Log("[TOTEM] Fin de la historia");
             return;
         }
@@ -137,7 +216,7 @@ public class StoryTotem : MonoBehaviour
     void Show()
     {
         text.gameObject.SetActive(true);
-        text.text = pages[page] + (advanceWithButton ? $"\n<size=55%><i>({page + 1}/{pages.Length})   A / X = siguiente</i></size>" : "");
+        text.text = pages[page] + (advanceWithButton ? $"\n<size=55%><i>({page + 1}/{pages.Length})   X = siguiente</i></size>" : "");
         timer = secondsPerPage;
     }
 

@@ -10,6 +10,7 @@ public static class StoryTotemSetupTool
 {
     const string TotemPath = SetupToolUtils.PrefabFolder + "/TotemMaldito.prefab";
     const string SoundFolder = "Assets/AS_Casual_Island_Game_Sounds_FREE";
+    const string VoicePath = "Assets/Audio/Historia/Historia_completa.mp3";   // voz grabada de toda la historia
 
     [MenuItem("Isla Pirata/Totem narrador")]
     static void Create()
@@ -54,8 +55,11 @@ public static class StoryTotemSetupTool
         story.pageClip = AssetDatabase.FindAssets("Button_3 t:AudioClip", new[] { SoundFolder })
             .Select(g => AssetDatabase.LoadAssetAtPath<AudioClip>(AssetDatabase.GUIDToAssetPath(g))).FirstOrDefault(c => c != null && c.name == "Button_3");
 
+        story.fullStoryClip = AssetDatabase.LoadAssetAtPath<AudioClip>(VoicePath);
+        audio.spatialBlend = 0.5f;   // la voz se oye bien aunque no estes justo delante
         Selection.activeObject = go;
         UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(go.scene);
-        Debug.Log($"[TOTEM] Totem narrador colocado a 2,5 m de '{start.name}', mirandote. Los textos se cambian en Story Totem > Pages. Guarda (Ctrl+S).");
+        Debug.Log($"[TOTEM] Totem narrador colocado a 2,5 m de '{start.name}', mirandote. Voz: {(story.fullStoryClip != null ? story.fullStoryClip.name : "ninguna (" + VoicePath + " no existe)")}. " +
+                  "Los textos se cambian en Story Totem > Pages. Guarda (Ctrl+S).");
     }
 }
