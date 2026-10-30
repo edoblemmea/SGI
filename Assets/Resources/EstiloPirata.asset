@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: efbc265cfe64cda4fa92c37f44c80cdf, type: 3}
+  m_Name: EstiloPirata
+  m_EditorClassIdentifier: Assembly-CSharp::PirateStyle
+  panelLook: 1
+  titleFont: {fileID: 11400000, guid: bd03db074791e2744b4b4d0203ffb8fb, type: 2}
+  headingFont: {fileID: 11400000, guid: b30a0a24c8754d04f9fce34865003ac2, type: 2}
+  bodyFont: {fileID: 11400000, guid: 0d2eba7184bc25449a48aeecd48bdaca, type: 2}
+  parchment: {fileID: 21300000, guid: 714ea00d42483b64f934c199916fb4b8, type: 3}
+  darkPanel: {fileID: 21300000, guid: d2aca05f640a7d44aa1cd5d8ef63e1f7, type: 3}
+  plaque: {fileID: 21300000, guid: e32a18ab1ed4d4842adc90bb80db40b6, type: 3}
+  band: {fileID: 21300000, guid: bd4ebc4cbfe113f479c5b1146cbd5360, type: 3}
+  rule: {fileID: 21300000, guid: 73338acf2e6af7e4083c5150ff13a62a, type: 3}
+  button: {fileID: 21300000, guid: c64b47ff3a7acb847b4e9a8035e9c266, type: 3}
+  circle: {fileID: 21300000, guid: 8c60bbc57540b404db283a16eeca12f7, type: 3}
+  chartFrame: {fileID: 21300000, guid: 79df048f1c64e59488a5ad2406374100, type: 3}
+  chartLines: {fileID: 21300000, guid: b9a5ec48db9cff3488d9b8827c73f665, type: 3}
+  pill: {fileID: 21300000, guid: da3795bd5f10d7a439f2744b5093fe81, type: 3}
+  row: {fileID: 21300000, guid: e2c3736c91578944caf0034d3537f705, type: 3}
+  medallion: {fileID: 21300000, guid: 014905041ef9fa143b763134392bde3f, type: 3}
+  segment:
+  - {fileID: 21300000, guid: 260bac50a32dab8408a14df7f82a9032, type: 3}
+  - {fileID: 21300000, guid: 2e1bdb081bdb98b468a0ac3584b28fb5, type: 3}
+  - {fileID: 21300000, guid: 19af8045a88321d4280aa28a1ae09dd0, type: 3}
+  - {fileID: 21300000, guid: d817bc20434f81e47a927fd99579085c, type: 3}
+  segmentFill:
+  - {fileID: 21300000, guid: 42849b7246a70684d9af511019615f36, type: 3}
+  - {fileID: 21300000, guid: 97c9d390252ca7b4cbcec3e781542b1d, type: 3}
+  - {fileID: 21300000, guid: 943b7060ce13421409a8c86eff88a4f1, type: 3}
+  - {fileID: 21300000, guid: 65921f951f410004f8c55f52b5a1566e, type: 3}
+  chartText: {r: 0.8, g: 0.84, b: 0.89, a: 1}
+  chartNavy: {r: 0.04, g: 0.08, b: 0.14, a: 1}
+  iconMove: {fileID: 21300000, guid: 03f4e465dff5e334fbf0c249605393ef, type: 3}
+  iconTurn: {fileID: 21300000, guid: 3804300dd2f916247b4a410de296db56, type: 3}
+  iconSpeed: {fileID: 21300000, guid: eeb54c3f54c23c14387b9c5969160dd3, type: 3}
+  iconVignette: {fileID: 21300000, guid: 2db9de09b6703d5469bc0e471068a650, type: 3}
+  iconTime: {fileID: 21300000, guid: ee8f9990bc6646a41807012c25d6ea71, type: 3}
+  iconVolume: {fileID: 21300000, guid: cfc1ab761a6d2aa4db13c7060ef5d19f, type: 3}
+  iconRestart: {fileID: 21300000, guid: 79750f29bc442fa43b02285aadb5e693, type: 3}
+  iconClose: {fileID: 21300000, guid: 8918c06c8bcb46a4c84bc59e812a3350, type: 3}
+  ink: {r: 0.24, g: 0.13, b: 0.05, a: 1}
+  inkSoft: {r: 0.42, g: 0.3, b: 0.18, a: 1}
+  paperText: {r: 1, g: 0.92, b: 0.74, a: 1}
+  gold: {r: 1, g: 0.78, b: 0.32, a: 1}
+  done: {r: 0.25, g: 0.5, b: 0.15, a: 1}
+  panelSoft: {r: 0.78, g: 0.68, b: 0.52, a: 1}
+  panelDone: {r: 0.62, g: 0.86, b: 0.45, a: 1}
+  danger: {r: 0.7, g: 0.15, b: 0.1, a: 1}
+  subtitleBand: {r: 0.04, g: 0.02, b: 0.01, a: 0.72}

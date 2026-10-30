@@ -27,6 +27,10 @@ public class Health : MonoBehaviour
     public Color flashColor = new Color(1f, 0.2f, 0.2f);
     public float flashTime = 0.15f;
 
+    [Header("Barra de vida")]
+    [Tooltip("Anade una HealthBar al empezar: sobre la cabeza en enemigos, en la vista en el jugador. Sale al recibir dano")]
+    public bool showHealthBar = true;
+
     [Header("Sonido (opcional)")]
     public AudioSource audioSource;
     public AudioClip hurtClip;
@@ -53,6 +57,7 @@ public class Health : MonoBehaviour
         Current = maxHealth;
         if ((flashRenderers == null || flashRenderers.Length == 0) && flashChildrenIfEmpty)
             flashRenderers = GetComponentsInChildren<Renderer>();
+        if (showHealthBar && GetComponent<HealthBar>() == null) gameObject.AddComponent<HealthBar>();
     }
 
     void Update()

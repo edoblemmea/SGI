@@ -1,10 +1,13 @@
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.XR;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 /// Pistas de controles en contexto: cada una sale UNA vez, cuando hace falta (al acercarte a una palmera, ver la llave,
-/// subir a la barca, llegar a la escala, al cofre...). El texto flota un poco por debajo de la vista y te sigue suavemente.
+/// subir a la barca, llegar a la escala, al cofre...). Se ven en un pergamino con el dibujo de los botones (B, X, GRIP...).
+/// Si la pista es de un mando concreto, sale encima de ese mando; si no, un poco por debajo de la vista, siguiendola suavemente.
 /// Espera a que el totem narrador termine de hablar. Busca los objetos por tipo: no hay que asignar nada.
 /// Lo crea solo el GameManager al empezar (casilla 'Tutorial Hints').
 public class TutorialHints : MonoBehaviour
@@ -15,11 +18,19 @@ public class TutorialHints : MonoBehaviour
     public float distance = 1.1f;
     [Tooltip("Cuanto por debajo de la mirada (m)")]
     public float below = 0.25f;
+    [Tooltip("Cuanto por encima del mando cuando la pista es de un mando (m)")]
+    public float aboveHand = 0.14f;
+    [Tooltip("Tamano de la pista junto al mando respecto a la que va delante de la vista")]
+    [Range(0.3f, 1f)] public float handScale = 0.55f;
     public bool debugLogs = true;
+
+    enum Side { View, Left, Right }
 
     class Hint
     {
         public string id, text;
+        public Side side;
+        public string[] buttons;
         public System.Func<bool> when;
         public bool done;
     }
@@ -27,7 +38,11 @@ public class TutorialHints : MonoBehaviour
     readonly List<Hint> hints = new List<Hint>();
     readonly Queue<Hint> queue = new Queue<Hint>();
     Transform head;
-    TextMeshPro label;
+    RectTransform board, iconRow;
+    CanvasGroup group;
+    TextMeshProUGUI label;
+    Hint current;
+    Vector3 baseScale;
     float showTimer, checkTimer, gap, startTime;
     bool damaged;
 
@@ -63,33 +78,34 @@ public class TutorialHints : MonoBehaviour
     // ------------------------------------------------------------------ las pistas
     void Define()
     {
-        Add("andar", "Joystick IZQUIERDO: andar.\nJoystick DERECHO hacia delante: teletransportarte (apunta y suelta).\nJoystick DERECHO a los lados: girar.",
+        Add("andar", Side.View, new[] { "Stick izq.", "Stick der." },
+            "<b>Stick izquierdo:</b> andar.\n<b>Stick derecho</b> adelante: teletransporte (apunta y suelta). A los lados: girar.",
             () => Time.time - startTime > 3f);
-        Add("menu", "Botón Y (mando izquierdo): menú de opciones\n(tipo de movimiento, giro, volumen...).",
+        Add("menu", Side.Left, new[] { "Y" }, "Menú de opciones\n(movimiento, giro, volumen...)",
             () => Time.time - startTime > 20f);
-        Add("palmera", "Para sacudir una palmera: acerca la mano al tronco,\naprieta el GRIP (botón lateral) y mueve la mano\na los lados con fuerza.",
+        Add("palmera", Side.View, new[] { "GRIP" }, "Acerca la mano al tronco, aprieta el <b>GRIP</b>\ny sacude la mano a los lados con fuerza.",
             () => Near(palms, 3f));
-        Add("llave", "¡La llave! Cógela con el GRIP\n(o apúntala con el rayo y aprieta el GRIP).",
+        Add("llave", Side.View, new[] { "GRIP" }, "¡La llave! Cógela con el <b>GRIP</b>\n(o apúntala con el rayo y aprieta el GRIP).",
             () => KeyOnGround(3f));
-        Add("bolsillo", "Para guardar la llave: suelta el GRIP\njunto a tu cadera DERECHA (bolita verde).\nPara sacarla, cógela de ahí o apúntala con el rayo.",
+        Add("bolsillo", Side.Right, new[] { "GRIP" }, "Guárdala soltando el <b>GRIP</b> junto a tu\ncadera DERECHA (bolita verde).",
             () => KeyHeld());
-        Add("espada", "Una espada: cógela con el GRIP.\nDa tajos RÁPIDOS para hacer daño.\nEnfúndala soltándola junto a tu cadera IZQUIERDA.",
+        Add("espada", Side.View, new[] { "GRIP" }, "Cógela con el <b>GRIP</b> y da tajos RÁPIDOS.\nEnfúndala soltándola junto a tu cadera IZQUIERDA.",
             () => Near(swords, 2.5f));
-        Add("aranas", "¡Arañas! Lánzales cocos (coge uno, lanza y suelta el GRIP)\no dales tajos con la espada.\nUn coco encima de una araña la aplasta.",
+        Add("aranas", Side.View, new[] { "GRIP" }, "¡Arañas! Lánzales cocos (coge, lanza y suelta el <b>GRIP</b>)\no dales tajos con la espada.",
             () => SpiderChasing());
-        Add("barca", "Para subir a la barca: acerca una mano a un remo\ny aprieta el GRIP. Cogerás los dos remos.",
+        Add("barca", Side.View, new[] { "GRIP" }, "Acerca una mano a un remo y aprieta el <b>GRIP</b>:\ncogerás los dos remos y subirás a la barca.",
             () => boat != null && !boat.IsBoarded && Dist(boat.transform) < 3.5f);
-        Add("remar", "Remar: GRIP apretado y tira de las manos hacia ti;\nsuéltalo para volver.   Un solo remo = girar.\nB: empujón atrás.   A / X: girar 90°.",
+        Add("remar", Side.View, new[] { "GRIP", "B", "A", "X" }, "<b>GRIP</b> apretado y tira de las manos hacia ti; suéltalo para volver.\nUn solo remo = girar.   <b>B</b>: atrás.   <b>A / X</b>: girar 90°.",
             () => boat != null && boat.IsBoarded);
-        Add("bajar", "Para bajar de la barca: joystick DERECHO hacia delante,\napunta al muelle o a la cubierta y suelta.",
+        Add("bajar", Side.Right, new[] { "Stick der." }, "Para bajar: <b>stick derecho</b> adelante,\napunta al muelle o a la cubierta y suelta.",
             () => boat != null && boat.IsBoarded && Done("remar") && Time.time - DoneTime("remar") > 25f);
-        Add("escala", "Apunta a la escala con el rayo y aprieta el GRIP para ir a ella.\nTrepar: agarra con el GRIP y tira hacia ABAJO,\nalternando las manos.",
+        Add("escala", Side.View, new[] { "GRIP" }, "Apunta a la escala con el rayo y aprieta el <b>GRIP</b>.\nTrepa agarrando y tirando hacia ABAJO, mano a mano.",
             () => Near(ladders, 6f));
-        Add("cofre", "Para abrir el cofre: saca la llave de tu cadera derecha\ny toca el candado con ella... pero solo de noche.",
+        Add("cofre", Side.Right, new[] { "GRIP" }, "Saca la llave de tu cadera derecha y toca el candado...\npero solo bajo la luna.",
             () => Near(chests, 4f));
-        Add("reloj", "Para que anochezca: coge el RELOJ DE ARENA con el GRIP\ny dale la vuelta.",
+        Add("reloj", Side.View, new[] { "GRIP" }, "Para que anochezca: coge el <b>reloj de arena</b>\ncon el GRIP y dale la vuelta.",
             () => Done("cofre") && Time.time - DoneTime("cofre") > 10f && !NightNow());
-        Add("dano", "¡Te atacan! El velo rojo es el daño que recibes.\nAléjate o defiéndete.",
+        Add("dano", Side.View, new string[0], "¡Te atacan! La barra de abajo es tu vida.\nAléjate o defiéndete.",
             () => damaged);
     }
 
@@ -156,12 +172,14 @@ public class TutorialHints : MonoBehaviour
 
     bool TotemTalking()
     {
+        if (GameIntro.Running) return true;   // historia y titulo del principio
         if (totems == null) return false;
         foreach (var t in totems) if (t != null && t.IsTalking) return true;
         return false;
     }
 
-    void Add(string id, string text, System.Func<bool> when) => hints.Add(new Hint { id = id, text = text, when = when });
+    void Add(string id, Side side, string[] buttons, string text, System.Func<bool> when) =>
+        hints.Add(new Hint { id = id, side = side, buttons = buttons, text = text, when = when });
 
     // ------------------------------------------------------------------ mostrar
     void Update()
@@ -182,43 +200,89 @@ public class TutorialHints : MonoBehaviour
         if (showTimer > 0f)
         {
             showTimer -= Time.deltaTime;
-            if (showTimer <= 0f) { label.gameObject.SetActive(false); gap = 1f; }
+            group.alpha = Mathf.Clamp01(Mathf.Min(showTimer / 0.4f, (secondsPerHint - showTimer) / 0.3f));
+            if (showTimer <= 0f) { board.gameObject.SetActive(false); gap = 1f; current = null; }
         }
         else if ((gap -= Time.deltaTime) <= 0f && queue.Count > 0 && !TotemTalking())
         {
-            var h = queue.Dequeue();
-            label.text = h.text;
-            label.gameObject.SetActive(true);
+            current = queue.Dequeue();
+            label.text = current.text;
+            SetIcons(current.buttons);
+            board.localScale = current.side == Side.View ? baseScale : baseScale * handScale;
+            board.gameObject.SetActive(true);
+            group.alpha = 0f;
+            Place(true);
             showTimer = secondsPerHint;
-            XRHandInput.HapticBoth(0.1f, 0.05f);
-            if (debugLogs) Debug.Log("[PISTAS] " + h.text.Replace("\n", " "));
+            if (current.side == Side.Left) XRHandInput.Haptic(XRNode.LeftHand, 0.25f, 0.08f);
+            else if (current.side == Side.Right) XRHandInput.Haptic(XRNode.RightHand, 0.25f, 0.08f);
+            else XRHandInput.HapticBoth(0.1f, 0.05f);
+            if (debugLogs) Debug.Log($"[PISTAS] ({current.side}) " + current.text.Replace("\n", " "));
         }
     }
 
-    // El texto sigue a la cabeza con suavidad (no pegado: marea menos)
     void LateUpdate()
     {
-        if (label == null || !label.gameObject.activeSelf) return;
-        Vector3 f = Vector3.ProjectOnPlane(head.forward, Vector3.up);
-        if (f.sqrMagnitude < 0.001f) f = head.up;
-        Vector3 target = head.position + f.normalized * distance + Vector3.down * below;
-        Transform t = label.transform;
-        t.position = Vector3.Lerp(t.position, target, 1f - Mathf.Exp(-4f * Time.deltaTime));
-        t.rotation = Quaternion.LookRotation(t.position - head.position);
+        if (board == null || !board.gameObject.activeSelf || current == null) return;
+        Place(false);
+    }
+
+    // Encima del mando de la pista; si no, por debajo de la vista siguiendo la cabeza con suavidad (pegado marea)
+    void Place(bool snap)
+    {
+        Vector3 target;
+        float follow = 4f;
+        if (current.side != Side.View &&
+            XRHandInput.TryGetWorldPosition(current.side == Side.Left ? XRNode.LeftHand : XRNode.RightHand, head.parent, null, out Vector3 hand))
+        {
+            Vector3 toHead = Vector3.ProjectOnPlane(head.position - hand, Vector3.up).normalized;
+            target = hand + Vector3.up * aboveHand + toHead * 0.04f;
+            follow = 12f;
+        }
+        else
+        {
+            Vector3 f = Vector3.ProjectOnPlane(head.forward, Vector3.up);
+            if (f.sqrMagnitude < 0.001f) f = head.up;
+            target = head.position + f.normalized * distance + Vector3.down * below;
+        }
+        board.position = snap ? target : Vector3.Lerp(board.position, target, 1f - Mathf.Exp(-follow * Time.deltaTime));
+        board.rotation = Quaternion.LookRotation(board.position - head.position);
+    }
+
+    void SetIcons(string[] buttons)
+    {
+        for (int i = iconRow.childCount - 1; i >= 0; i--) Destroy(iconRow.GetChild(i).gameObject);
+        if (buttons != null) foreach (var b in buttons) PirateStyle.MakeButtonIcon(iconRow, b, 46f);
+        iconRow.gameObject.SetActive(buttons != null && buttons.Length > 0);
     }
 
     void CreateLabel()
     {
-        var go = new GameObject("Pista (texto)");
-        go.transform.SetParent(transform, false);
-        label = go.AddComponent<TextMeshPro>();
-        label.fontSize = 0.45f;
-        label.alignment = TextAlignmentOptions.Center;
-        label.rectTransform.sizeDelta = new Vector2(1.3f, 0.5f);
-        label.color = new Color(1f, 0.95f, 0.75f);
-        label.outlineWidth = 0.25f;
-        label.outlineColor = Color.black;
-        label.gameObject.SetActive(false);
-        go.transform.position = head.position + head.forward * distance;
+        var s = PirateStyle.Get();
+        board = PirateStyle.MakePanel("Pista", transform, new Vector2(620, 220), 560f, out RectTransform content);
+        baseScale = board.localScale;
+        group = board.GetComponent<CanvasGroup>();
+
+        // Fila de botones arriba
+        var row = new GameObject("Botones", typeof(RectTransform));
+        iconRow = (RectTransform)row.transform;
+        iconRow.SetParent(content, false);
+        iconRow.anchorMin = new Vector2(0f, 1f);
+        iconRow.anchorMax = new Vector2(1f, 1f);
+        iconRow.pivot = new Vector2(0.5f, 1f);
+        iconRow.sizeDelta = new Vector2(0f, 50f);
+        iconRow.anchoredPosition = new Vector2(0f, -18f);
+        var layout = row.AddComponent<HorizontalLayoutGroup>();
+        layout.childAlignment = TextAnchor.MiddleCenter;
+        layout.spacing = 12f;
+        layout.childControlWidth = layout.childControlHeight = false;
+        layout.childForceExpandWidth = layout.childForceExpandHeight = false;
+
+        label = PirateStyle.MakeText(content, "Texto", 28, false, s.paperText, 30f);
+        label.rectTransform.offsetMax = new Vector2(-30f, -74f);   // deja sitio a los botones
+        label.enableAutoSizing = true;
+        label.fontSizeMin = 16f;
+        label.fontSizeMax = 28f;
+        board.gameObject.SetActive(false);
+        board.position = head.position + head.forward * distance;
     }
 }

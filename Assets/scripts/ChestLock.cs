@@ -286,6 +286,7 @@ public class ChestLock : MonoBehaviour
         go.transform.SetParent(transform, true);
         go.transform.position = new Vector3(b.center.x, b.max.y + 0.6f, b.center.z);
         var t = go.AddComponent<TMPro.TextMeshPro>();
+        PirateStyle.ApplyFont(t, PirateStyle.FontRole.Body);
         t.fontSize = 1.2f;
         t.alignment = TMPro.TextAlignmentOptions.Center;
         t.rectTransform.sizeDelta = new Vector2(2.5f, 1f);

@@ -209,15 +209,63 @@ Para que salgan más arañas de noche: en `On Night Started` activa un grupo de 
 
 Menú **Isla Pirata > Menu muneca** → *Crear / actualizar menú de la muñeca*:
 - añade la **viñeta** (`TunnelingVignette` de los Starter Assets) bajo `Main Camera`, conectada a Move, giro suave y teletransporte;
-- crea `Menu Muneca` (con `WristMenu`) encima del `Left Controller`;
+- crea `Menu Muneca` (con `WristMenu`) encima del `Left Controller`, con aspecto de **carta náutica** (antes hay que pulsar *Isla Pirata > Estilo pirata*: si faltan sus texturas da error y no toca el menú). Si ya había un menú, lo borra y crea el nuevo;
 - crea el EventSystem con XR UI Input Module si no existe.
 
-**En el juego:** botón **Y** = abrir/cerrar. Se pulsa con el rayo del mando derecho y el gatillo. Opciones: movimiento (teletransporte / continuo en el joystick izquierdo; el derecho siempre teletransporta para la barca), giro (saltos / suave), grados del salto, velocidad, viñeta, hora (día/noche), volumen y reiniciar (pide confirmación). Se guardan en el dispositivo.
+**En el juego:** botón **Y** = abrir/cerrar. Se pulsa con el rayo del mando derecho y el gatillo. Tres pestañas (Movimiento, Confort, Partida); cada opción enseña todos sus valores y el elegido va relleno de oro; al pulsar la fila pasa al siguiente. Opciones: movimiento (teletransporte / continuo en el joystick izquierdo; el derecho siempre teletransporta para la barca), giro (saltos / suave), grados del salto, velocidad, viñeta, hora (día/noche), volumen y reiniciar (pide confirmación). Se guardan en el dispositivo.
 
-**Cómo comprobarlo:** `[MENU] Listo...` al empezar (sin ningún FALTA) y `[MENU] Movimiento continuo`, etc., al pulsar. Sin casco: clic derecho en *Wrist Menu* > **Abrir / cerrar**.
+**Cómo comprobarlo:** `[MENU] Menu de carta nautica (creado con la herramienta)` y `[MENU] Listo...` al empezar (sin ningún FALTA) y `[MENU] Movimiento continuo`, etc., al pulsar. Sin casco: clic derecho en *Wrist Menu* > **Abrir / cerrar**.
+
+---
+
+## 10. Intro: historia, título y barras de vida
+
+Antes: *Isla Pirata > Totem narrador* (el tótem tiene que estar a menos de 4 m de `Inicio jugador`) y *Isla Pirata > Juego* (crea `GameManager > Musica`).
+
+Menú **Isla Pirata > Intro (historia y titulo)**: crea el objeto `Intro` (**Game Intro**) y le asigna el tótem, `DiaNoche` y la música (y le quita *Play On Awake* a la música, porque la enciende la intro).
+
+**En el juego:**
+1. Empieza de noche, sin música, sin poder andar ni teletransportarse (girar sí). El tótem se ilumina con luz de fuego y cuenta la historia. **X** = página siguiente; **mantener B** = saltar la historia.
+2. Al acabar sale el título (*Game Intro > Game Title*) mientras amanece.
+3. Empieza la música y ya te puedes mover. Las pistas de controles esperan hasta aquí.
+- Al reiniciar la partida no se repite la historia (`Story Only First Time`). Para probar sin historia, desmarca `Play Story`.
+- Fuego con partículas (opcional): arrastra un prefab de fuego a *Story Totem > Fire Effect Prefab*.
+- **Título con imágenes propias:** las del equipo están en `Assets/UI/Titulo/` y *Isla Pirata > Intro* las importa y las asigna sola. Para otras imágenes: importa los PNG en `Assets/UI` (*Texture Type* = Sprite (2D and UI), *Alpha Is Transparency*, *Generate Mip Maps*, *Max Size* 2048, **Apply**).
+  - *Title Image* = el panel de madera.
+  - *Title Text Image* = el texto, en un PNG transparente **del mismo tamaño en píxeles** que el panel. Aparece animado encima.
+  - *Text Reveal* elige cómo aparece; *Text Reveal Delay* / *Seconds* marcan cuándo empieza y cuánto tarda.
+
+**Barras de vida:** no hay que montar nada. Cada `Health` añade una `HealthBar` al empezar (casilla *Show Health Bar*): en los enemigos, sobre la cabeza; en el jugador, abajo en la vista. Salen al recibir daño y se desvanecen a los 3 s; la del jugador se queda si te queda menos del 30 %.
+
+**Arranque:** con Quest Link el casco tarda 1-3 s en dar imagen al pulsar Play. La intro espera a que la dé (*Wait For Headset*), un segundo más (*Start Delay*) y entonces empieza la historia; hasta ese momento no suena nada (*Mute Until Ready*). Sin casco empieza al momento.
+
+**Cómo comprobarlo:** `[INTRO] Casco listo: empiezo tras X s`, `[INTRO] Movimiento bloqueado...`, `[TOTEM] El capitan empieza a hablar`, `[INTRO] Titulo: ...`, `[INTRO] Fin de la intro: ya te puedes mover` y `[INTRO] Musica en marcha`. Sin casco: en Play, desmarca *Play Story* antes de empezar, o espera a que acabe la voz.
+
+---
+
+## 11. Estilo pirata de la interfaz
+
+Orden:
+1. **Isla Pirata > Estilo pirata (texturas, fuente y estilo)**. Crea `Assets/UI/*.png` (paneles: Placa, Banda, Filete; menú de la muñeca: Carta_Marco, Carta_Lineas, Pildora, Fila, Medallon, Segmento_*; iconos…), las fuentes `Assets/UI/Fuentes/*SDF.asset` (Pirata One para títulos, IM Fell English SC para encabezados, Libre Baskerville para el texto) y `Assets/Resources/EstiloPirata.asset`. Pregunta si quieres poner **Libre Baskerville como fuente por defecto de TextMeshPro**: di que sí, así ningún texto sale con la fuente por defecto. Los colores se cambian en `EstiloPirata.asset`.
+2. **Elige el aspecto de los paneles**: *Isla Pirata > Estilo pirata - paneles de madera y oro* o *... - paneles en banda difuminada* (o el campo `Panel Look` de `EstiloPirata.asset`). Se puede cambiar cuando quieras; se nota al darle a Play.
+3. **Isla Pirata > Menu muneca** → *Crear / actualizar*: el menú de carta náutica (sección 9).
+4. **Isla Pirata > Intro** otra vez (activa la niebla de la escena para el build).
+5. Ctrl+S.
+
+Lo demás se viste solo al darle a Play, con el aspecto elegido: subtítulos de la historia (nombre del capitán en IM Fell, línea actual en dorado), pistas de controles (botones del mando en círculos dorados, encima del mando que toca), avisos de objetivos (título en Pirata One y filete dorado), panel de objetivos de la muñeca y pantalla de fin.
+
+**Cómo comprobarlo:** `[ESTILO] Estilo pirata listo... Paneles: Madera. Fuentes: titulos PirataOne SDF, encabezados IMFellEnglishSC SDF, texto LibreBaskerville SDF` al pulsar el menú (si alguna dice `FALTA`, falta su .ttf en `Assets/UI/Fuentes`). En Play no debe salir `[ESTILO] No existe ...EstiloPirata.asset`; puede salir `[ESTILO] N textos de la escena usaban la fuente por defecto de TMP: ahora usan la del estilo` (es correcto). Al acabar la intro sale `[OBJETIVO] Tu objetivo: ...`.
+
+## 12. Limpieza antes de entregar
+
+En una **rama de git** y con la escena guardada: **Isla Pirata > Limpieza del proyecto**.
+1. *Analizar el proyecto* → marca las carpetas que sobran (las que dicen ENTERA son las más seguras) → *Enviar a la papelera*. Abre la escena, Play: nada rosa ni *Missing*. Commit.
+2. *Dejar solo la escena del juego en Build Profiles*.
+3. Antes del build final: *Apagar todos* los `debugLogs` (y *Encender* para seguir depurando). En el build ya solo salen warnings (GameManager > *Only Warnings In Build*).
+4. *Buscar texturas de más de 2048 px* → *Limitar*: el build para Quest tarda menos y pesa menos.
 
 ---
 
 ## Prefabs
 
-Cuando cada cosa funcione, arrástrala a `Assets/Prefabs/`: XR Origin, barca, llave, cofre, araña, esqueleto, coco, espada, catalejo, reloj de arena y GameManager. Es el paso previo para migrar a la escena propia (CLAUDE.md, hoja de ruta, paso 8).
+Cuando cada cosa funcione, arrástrala a `Assets/Prefabs/`: XR Origin, barca, llave, cofre, araña, esqueleto, coco, espada, reloj de arena y GameManager. Es el paso previo para migrar a la escena propia (CLAUDE.md, hoja de ruta, paso 8).

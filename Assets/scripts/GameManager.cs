@@ -56,6 +56,10 @@ public class GameManager : MonoBehaviour
     [Range(0f, 1f)] public float wavesVolume = 0.25f;
     [Tooltip("Pistas de controles en contexto (TutorialHints): se crean solas al empezar")]
     public bool tutorialHints = true;
+    [Tooltip("Aviso grande en un pergamino al empezar y al completar cada objetivo (ObjectiveToast)")]
+    public bool objectiveToasts = true;
+    [Tooltip("Al empezar, vestir el panel de objetivos y la pantalla de fin con el estilo pirata (pergamino y tinta)")]
+    public bool styleUI = true;
 
     [Header("Eventos")]
     public UnityEvent<string> onObjectiveCompleted;
@@ -64,9 +68,13 @@ public class GameManager : MonoBehaviour
 
     [Header("Diagnostico")]
     public bool debugLogs = true;
+    [Tooltip("En el build (no en el editor) solo se escriben warnings y errores: los Debug.Log de todos los sistemas se ignoran")]
+    public bool onlyWarningsInBuild = true;
 
     public bool IsGameOver { get; private set; }
     public bool Won { get; private set; }
+    /// El primer objetivo sin completar (null si estan todos)
+    public Objective CurrentObjective => objectives.Find(x => !x.Done);
 
     float endTime;
 
@@ -80,6 +88,7 @@ public class GameManager : MonoBehaviour
         }
         Instance = this;
         if (endPanel != null) endPanel.SetActive(false);
+        if (onlyWarningsInBuild && !Application.isEditor) Debug.unityLogger.filterLogType = LogType.Warning;
     }
 
     void OnDestroy() { if (Instance == this) Instance = null; }
@@ -93,6 +102,15 @@ public class GameManager : MonoBehaviour
         RefreshUI();
         if (tutorialHints && FindAnyObjectByType<TutorialHints>() == null)
             new GameObject("Pistas de controles").AddComponent<TutorialHints>();
+        if (objectiveToasts && FindAnyObjectByType<ObjectiveToast>() == null)
+            new GameObject("Avisos de objetivos").AddComponent<ObjectiveToast>();
+        if (styleUI)
+        {
+            if (objectivesText != null) PirateStyle.SkinPanel(objectivesText.canvas, false);
+            if (endPanel != null) PirateStyle.SkinPanel(endPanel.GetComponentInChildren<Canvas>(true), true);
+            int changed = PirateStyle.ReplaceDefaultFonts();
+            if (debugLogs && changed > 0) Debug.Log($"[ESTILO] {changed} textos de la escena usaban la fuente por defecto de TMP: ahora usan la del estilo");
+        }
         if (ambientWaves)
         {
             var src = new GameObject("Olas (ambiente)").AddComponent<AudioSource>();
@@ -177,14 +195,28 @@ public class GameManager : MonoBehaviour
     void RefreshUI()
     {
         if (objectivesText == null) return;
-        var sb = new StringBuilder("<b>Objetivos</b>\n");
+        // Arriba, grande, el objetivo actual; debajo, pequenos, los cumplidos (tachados) y los que faltan
+        var s = PirateStyle.Get();
+        string ink = "#" + ColorUtility.ToHtmlStringRGB(styleUI ? s.paperText : s.ink);   // paneles oscuros: texto claro
+        string soft = "#" + ColorUtility.ToHtmlStringRGB(styleUI ? s.panelSoft : s.inkSoft);
+        string ok = "#" + ColorUtility.ToHtmlStringRGB(styleUI ? s.panelDone : s.done);
+        int doneCount = objectives.FindAll(x => x.Done).Count;
+        var current = CurrentObjective;
+        var sb = new StringBuilder($"<color={soft}><size=80%>Objetivo {Mathf.Min(doneCount + 1, objectives.Count)} de {objectives.Count}</size></color>\n");
+        if (current != null)
+        {
+            sb.Append($"<color={ink}><b>{current.description}</b>");
+            if (current.required > 1) sb.Append($" ({current.progress}/{current.required})");
+            sb.Append("</color>\n");
+        }
+        else sb.Append($"<color={ok}><b>¡Todo cumplido!</b></color>\n");
+        sb.Append("<size=70%>");
         foreach (var o in objectives)
         {
-            sb.Append(o.Done ? "<color=#7CFC00>[x] " : "[ ] ").Append(o.description);
-            if (o.required > 1) sb.Append($" ({o.progress}/{o.required})");
-            if (o.Done) sb.Append("</color>");
-            sb.Append('\n');
+            if (o == current) continue;
+            sb.Append(o.Done ? $"<color={ok}>[x] <s>{o.description}</s></color>\n" : $"<color={soft}>[ ] {o.description}</color>\n");
         }
+        sb.Append("</size>");
         objectivesText.text = sb.ToString();
     }
 

@@ -100,6 +100,18 @@ public static class ProceduralSounds
         return s;
     });
 
+    /// Gong grave del titulo: varios parciales inarmonicos que se apagan despacio, con un golpe al principio
+    public static AudioClip Gong() => Make("Gong", 4f, t =>
+    {
+        float env = Mathf.Clamp01(t * 200f) * Mathf.Exp(-t * 1.1f);
+        float s = Mathf.Sin(2f * Mathf.PI * 98f * t) * 0.6f + Mathf.Sin(2f * Mathf.PI * 147.5f * t) * 0.35f +
+                  Mathf.Sin(2f * Mathf.PI * 233f * t) * 0.25f * Mathf.Exp(-t * 2f) + Mathf.Sin(2f * Mathf.PI * 351f * t) * 0.15f * Mathf.Exp(-t * 3f);
+        return s * env + Noise() * 0.3f * Mathf.Exp(-t * 30f);
+    });
+
+    /// Clic de madera al pulsar un boton del menu
+    public static AudioClip Click() => Make("Clic", 0.07f, t => (Mathf.Sin(2f * Mathf.PI * 900f * t) * 0.6f + Noise() * 0.4f) * Mathf.Exp(-t * 70f));
+
     /// Arena del reloj al darle la vuelta (siseo suave y largo)
     public static AudioClip Sand() => Make("Arena", 2.5f, Filtered(0.2f, t => Mathf.Sin(Mathf.PI * Mathf.Clamp01(t / 2.5f)) * 0.5f));
 

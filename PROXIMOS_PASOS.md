@@ -1,9 +1,9 @@
-# Próximos pasos (actualizado el 27/10/2026)
+# Próximos pasos (actualizado el 30/10/2026, 20:00)
 
 **Resumen:**
 - La historia es la del **barco fantasma** (ver `CLAUDE.md` > *Historia*): eres el grumete que no fue maldito y vuelves para liberar a tu tripulación de esqueletos.
-- Casi todo el código está escrito y compila, pero **casi nada está montado en la escena ni probado con el casco**.
-- Trabaja siempre en **`Assets/Scenes/IslaPirata.unity`**. Cada paso usa un botón del menú **Isla Pirata**.
+- Todo el código está escrito y **la mayoría ya está montado en `IslaPirata.unity`** (revisado leyendo la escena guardada el 30/10). Falta sobre todo **probar con el casco** y **cubrir el escalado**.
+- Trabaja siempre en **`Assets/Scenes/IslaPirata.unity`** y en la rama **`barco-fantasma`**. Cada paso usa un botón del menú **Isla Pirata**.
 - Si algo sale raro, pásale a Claude Code las líneas de la Console o una captura.
 
 **Entrega: 4 de noviembre. Presentación: 5 de noviembre.**
@@ -12,84 +12,93 @@
 
 ---
 
+## 0. Urgente
+
+### 0.1 Guardar la escena y limpiar restos
+- [x] `BoatDoctor`, `Lugares (carta)` y `Boton Viaje carta` ya no están en la escena guardada, y no hay *Missing Script* (revisado el 30/10).
+- [ ] **Ctrl+S en `IslaPirata.unity`**: a las 19:50 del 30/10 la escena guardada seguía siendo la de las 18:10 (la recuperada tras el cierre de Unity). El menú de carta náutica solo existía en memoria.
+- [ ] Borrar `Assets/_Recovery` desde el Project (era la copia de seguridad de la escena tras el cierre de Unity).
+- [ ] Commit en `barco-fantasma` (hay muchos cambios sin guardar en git: scripts nuevos, `Assets/UI`, `Assets/Resources`).
+
+### 0.2 Escalado (requisito de la práctica, sin cubrir)
+Desde que se quitó la carta no hay ningún objeto que se escale. Opciones (decidir una):
+- **A. Maqueta de la isla (recomendada).** Una isla en miniatura en 3D (*World in Miniature*) sobre un barril o una mesa del muelle. Se coge con dos manos y se agranda o se encoge (0,5x a 3x). Muestra un muñequito donde estás tú y el barco fantasma. En la historia: la tallaste mientras estabas escondido. Opcional: tocar un punto de la maqueta = viajar allí (segundo método de navegación). Necesita una herramienta que convierta el Terrain en una malla pequeña (el Terrain no se puede escalar), más un script.
+- **B. Carta más bonita.** Recuperar el código de la carta desde git (estaba antes del commit `deab02e`) y cambiar solo el aspecto:
+  - dibujo a mano estilo tinta, con rosa de los vientos y una X, en vez de la foto cenital;
+  - pergamino con bordes quemados y algo curvado, en vez de un Quad plano;
+  - se desenrolla entre dos varillas de madera al separar las manos.
+- [ ] Decidir A o B y pedírselo a Claude Code.
+
+---
+
 ## A. Montaje en Unity (sin casco)
 
-### 1. Escena propia (si no está hecha)
+### 1. Escena propia
 - [x] **Isla Pirata > Crear escena propia** → `Assets/Scenes/IslaPirata.unity`.
 
 ### 2. Barca, remos y teletransporte
 - [x] XR Origin sobre las tablas del muelle; **Start On Board** desmarcado en Boat Rowing.
-- [x] **Isla Pirata > Barca**: *Diagnóstico*, luego **2. Preparar barca y remos** (también quita el *Static* del prefab de la barca), **3. Arreglar teletransporte**, y *Diagnóstico* otra vez hasta `TODO CORRECTO`.
-- [x] `BoatDoctor`: se pasa solo al objeto del Rigidbody. Cuando ya no haga falta, desactívalo (crea postes rojos y empuja la barca al empezar).
+- [x] **Isla Pirata > Barca**: *Diagnóstico*, **2. Preparar barca y remos**, **3. Arreglar teletransporte**, y *Diagnóstico* otra vez hasta `TODO CORRECTO`.
 
 ### 3. NavMesh y arañas (salen de las rocas)
-- [ ] **Isla Pirata > Aranas**: NavMesh (**Bake**) y prefab Arana.
-- [ ] Sección **4. Nidos en rocas**, de una de estas dos formas:
-  - selecciona rocas que ya hayas puesto (RockFREE) y pulsa **Convertir rocas seleccionadas en nidos**;
-  - o centra la vista en la isla y pulsa **Colocar rocas con nido**.
-- [ ] **Quitar las arañas sueltas** (el grupo `Aranas` de antes), para que solo salgan de las rocas.
-- [ ] Pulsa **Bake** otra vez en `NavMesh`: las rocas nuevas cambian el suelo.
+- [x] NavMesh horneado (está en `Assets/Island/Scenes/Demo/NavMesh-NavMesh.asset`) y prefab `Arana`.
+- [x] 3 nidos en rocas (`Nidos de aranas`).
 - [ ] Selecciona cada `Nido ...` y comprueba que la **Salida** (al final de la línea morada) queda fuera de la roca, sobre el suelo y no en el agua.
+- [ ] Si has movido rocas después de hornear, pulsa **Bake** otra vez en `NavMesh`.
 - [ ] Si las rocas salen rosas, convierte sus materiales (`Assets/RockFREE/Materials`) a URP.
 
 ### 4. Materiales rosas
-- [x] Selecciona los materiales de `ChestFree/Materials` y `Rust Key/Materials` y usa **Edit > Rendering > Materials > Convert Selected Built-in Materials to URP**. El de StaffOfPain lo convierte solo la herramienta de la maldición.
+- [x] `ChestFree/Materials` y `Rust Key/Materials` convertidos a URP.
 
 ### 5. Palmeras, cocos, llave y cofre
-- [x] **Isla Pirata > Cocos**: *Crear prefab Coco*. Opcional: cocos en las palmeras del Terrain.
-- [x] **Isla Pirata > Palmeras sacudibles**: crear el prefab y colocar palmeras sobre la isla.
-- [x] **Isla Pirata > Llave y cofre**: preparar la llave (`rust_key`), esconderla en una palmera y preparar el cofre (`chest_close`, que ya está **sobre el barco fantasma**).
-- [x] **Llave y cofre > 4. Bolsillo** (probado el 27/10: la llave se guarda en la cadera).
+- [x] Prefab Coco, palmeras sacudibles, llave escondida y cofre sobre el barco fantasma.
+- [x] **Llave y cofre > 4. Bolsillo** (probado el 27/10).
 
 ### 6. Barco fantasma, esqueletos y maldición
-- [ ] **Isla Pirata > Juego**: *Crear / actualizar GameManager* y, en la sección 2, **Preparar barco fantasma**. Esto crea el ancla de la cubierta y la zona de llegada; los objetivos quedan `llave` → `barco` → `cofre`.
-- [ ] **Isla Pirata > Barca > 3. Arreglar teletransporte** otra vez (para la nueva ancla de la cubierta) y luego **Diagnóstico**.
-- [x] **Isla Pirata > Escala de cuerda** → *Crear / actualizar escala*: para subir trepando desde la barca. Comprueba que `Abajo` queda a ras del agua y `Punto cubierta` sobre la cubierta.
-- [ ] Pulsa **Bake** en `NavMesh`: la cubierta del barco fantasma tiene que salir azul.
-- [ ] **Isla Pirata > Esqueletos piratas**:
-  1. *Crear / actualizar prefab Esqueleto*. Arrastra uno a la escena, dale a Play y haz clic derecho en SkeletonCrumble > **Desmoronar ahora**: tiene que caer como un muñeco y hundirse.
-  2. *Colocar esqueletos* (se ponen alrededor del cofre).
-  3. *Quitar los piratas leñadores antiguos*. Después se puede borrar la carpeta `Assets/FreeCharacter`.
-- [ ] **Isla Pirata > Maldicion** → **Preparar maldición**. Crea `DiaNoche` (empieza a las 9 h), `Maldicion`, el cofre maldito, el **Reloj de arena** junto al cofre y 4 **tótems** alrededor. Mueve los que queden fuera de la cubierta.
+- [x] `GameManager` con objetivos `llave` → `barco` → `cofre`, `ZonaBarcoPirata` y `anclaBarcoPirata`.
+- [x] Escala de cuerda.
+- [x] Esqueletos alrededor del cofre; leñadores antiguos quitados (ya se puede borrar `Assets/FreeCharacter`).
+- [x] Maldición: `DiaNoche`, `Maldicion`, reloj de arena y tótems.
+- [ ] Comprueba que la cubierta del barco fantasma sale azul en el NavMesh (si no, **Bake** otra vez).
 - [ ] Prueba sin casco, en Play:
   - el texto del cofre aparece si intentas abrirlo de día;
   - en `DiaNoche`, clic derecho > **Hacer de noche**: los tótems brillan más y la cerradura se ilumina;
   - en ChestLock, clic derecho > **Abrir ahora**: los tótems se apagan, los esqueletos se desmoronan y salen `[MALDICION]` y `[JUEGO] Objetivo 'cofre'`.
 
 ### 6b. Menú de la muñeca
-- [ ] Volver a pulsar *Menu muneca* **después** de *Maldicion* (en el último log salía `dia/noche FALTA`).
-- [x] **Isla Pirata > Menu muneca** → *Crear / actualizar menú de la muñeca*. Hazlo **después** de la maldición (usa `DiaNoche`). En la Console, `[MENU] Menu creado...` sin ningún FALTA. Ctrl+S.
-- [ ] Prueba con el casco: **Y** abre el menú; con el rayo derecho cambia el movimiento a continuo y anda con el joystick izquierdo; cambia el giro; quita la viñeta; cambia la hora; baja el volumen.
+- [x] **Isla Pirata > Menu muneca** creado.
+- [ ] Se vuelve a crear en el paso 6d con el aspecto nuevo.
 
-### 7. Telescopio
-- [ ] **Isla Pirata > Telescopio**: *Crear prefab*. En el prefab, mueve el slider **Extension** de 0 a 1: los tramos tienen que salir hacia el ocular.
-- [ ] *Colocar telescopio* en un sitio alto de la isla, con *Objetivo 'otear'* marcado, que será el primer objetivo.
+### 6c. Intro y barras de vida (código del 30/10)
+- [ ] **Isla Pirata > Intro (historia y titulo)**. En la Console: `[INTRO] Intro lista. Totem: ok, dia/noche: ok, musica: ok`. Si dice que el inicio está LEJOS del tótem, acerca `Inicio jugador`.
+- [ ] Título con las imágenes del equipo (`Assets/UI/Titulo/`, las asigna el botón *Intro*): en `Intro` pon *Text Reveal* = **Pisoton**, desmarca *Reveal Glow*, *Stomp Center* = 0,5 / 0,3. Prueba con *Play Story* desmarcado y vuelve a marcarlo.
+- [ ] Prueba con el casco: al pulsar Play la pantalla puede estar 1-3 s en negro (es Quest Link), pero **no debe sonar nada hasta que se vea la imagen** (`[INTRO] Casco listo: empiezo tras X s`). Empieza de noche, sin música y sin poder andar; el tótem con luz de fuego; X pasa página; mantener B salta; sale el título mientras amanece; luego música y ya puedes andar.
+- [ ] Barras de vida: pega a una araña con la espada (sale la barra encima) y deja que te muerda (sale abajo en tu vista).
+- [ ] (Opcional) un prefab de fuego con partículas en *Story Totem > Fire Effect Prefab*.
 
-### 8. Interfaz y carta
-- [ ] **Isla Pirata > Juego** > sección 3: pantalla de fin y velo de daño. El panel de la muñeca lo sustituye la carta.
-- [ ] **Isla Pirata > Carta**. Hazlo **después** del telescopio, las palmeras y el barco fantasma, porque los usa para crear los lugares:
-  1. **Hacer foto de la isla**: genera `Assets/Prefabs/MapaIsla.png`. Ábrela y comprueba que se ve la isla desde arriba, en tono pergamino.
-  2. **Crear / actualizar carta**:
-     - crea la carta flotando delante del XR Origin;
-     - crea los lugares en `Lugares (carta)`: Muelle, Mirador, Palmeral y Barco fantasma;
-     - crea el **EventSystem**;
-     - hace que los objetivos salgan en la carta.
-  3. Revisa los `Punto de llegada` de cada lugar (dónde apareces al viajar): tienen que estar sobre el suelo, no dentro de rocas.
-- [ ] Prueba con el casco:
-  1. Coge la carta por las varillas y sepárala con las dos manos: se agranda.
-  2. Al acercarte al mirador o al palmeral sale "Descubierto".
-  3. Apunta con el rayo a un lugar descubierto y pulsa el gatillo: viajas allí.
-  4. Pulsa **Menú** en el mando izquierdo: la carta vuelve delante de ti.
-  5. El barco fantasma aparece en la carta tras verlo con el catalejo, y no permite viajar.
+### 6d. Estilo de la interfaz y menú de carta náutica (código del 30/10, ver `GUIA_MONTAJE.md` > 9 y 11)
+Muestras de todos los diseños: https://claude.ai/artifact/BJvN5ifdy85JwYH3v31T81
+- [x] **Isla Pirata > Estilo pirata** (fuera de Play). Cuando pregunte por la fuente por defecto de TextMeshPro, **Sí, cambiarla** (pasa a Libre Baskerville). En la Console: `Fuentes: titulos PirataOne SDF, encabezados IMFellEnglishSC SDF, texto LibreBaskerville SDF`, sin ningún `FALTA`.
+- [x] Comprueba que en `Assets/UI` están `Carta_Marco`, `Carta_Lineas`, `Pildora`, `Fila`, `Medallon` y los `Segmento_*` (los blancos son normales: se tiñen de oro al jugar).
+- [x] **Isla Pirata > Menu muneca** → *Crear / actualizar menú de la muñeca* (sustituye el menú por el de carta náutica).
+- [x] **Isla Pirata > Intro** otra vez. **Ctrl+S.**
+- [x] Play y **Y**: `[MENU] Menu de carta nautica (creado con la herramienta)`; fondo azul noche con líneas doradas, pestañas en píldoras, el valor elegido relleno de oro, la fila se ilumina al apuntar.
+- [x] **Decidir el aspecto de los paneles** (en el estilo guardado está **Banda**) (avisos, pistas, subtítulos, objetivos y pantalla final): *Isla Pirata > Estilo pirata - paneles de madera y oro* o *- paneles en banda difuminada*, probar los dos y quedarse con uno.
+- [x] Si te quedas con Libre Baskerville: borrar desde el Project `Assets/UI/Fuentes/Alegreya-*.ttf`, `Alegreya*SDF.asset` y `OFL_Alegreya.txt`.
+- [x] Prueba con el casco: subtítulos con la línea en dorado, pista de **Y** encima del mando izquierdo, aviso "Tu objetivo" al acabar la intro, "¡Objetivo cumplido!" al coger la llave; que los textos del menú se lean bien (si alguno queda pequeño, díselo a Claude Code).
 
-### 9. OpenXR (para el PC del casco)
-- [x] *Project Settings > XR Plug-in Management > OpenXR* (pestaña Windows):
-  - añadir *Oculus Touch Controller Profile* y *Meta Quest Touch Plus Controller Profile*;
-  - en *Play Mode OpenXR Runtime*, elegir **System Default**.
+### 7. Lo que falta montar
+- [ ] **Isla Pirata > Rescate del jugador** (`PlayerRescue`): no está en la escena guardada. Sin él, si caes al mar no vuelves a la barca.
+- [x] **Isla Pirata > Espada > 3. Funda** (`SwordHolster`): ya está en la escena.
+- [ ] **Isla Pirata > Juego** > sección 3: pantalla de fin y velo de daño (comprobar).
 
-### 10. Git
-- [x] Resolver el conflicto de `Assets/XR/Settings/OpenXRPackageSettings.asset`: quedarse con el nuevo `OpenXR Package Settings.asset`, que es el que usa Unity, y borrar el antiguo (roto). Claude Code puede hacerlo.
-- [ ] Commit y push. Tu compañera hace *pull* y abre el proyecto con **Unity 6000.5.0f1**.
+### 8. OpenXR (para el PC del casco)
+- [x] Perfiles de mando de Oculus Touch y Meta Quest Touch Plus; *Play Mode OpenXR Runtime* = **System Default**.
+
+### 9. Git
+- [x] Conflicto de `OpenXRPackageSettings.asset` resuelto.
+- [x] `master` igualada a `barco-fantasma` (30/10).
+- [ ] Commit y push de la limpieza del paso 0.1. Para pasar los cambios a `master` otra vez: `git checkout master`, `git pull`, `git merge --ff-only barco-fantasma`, `git push`, `git checkout barco-fantasma`.
 
 ---
 
@@ -97,30 +106,24 @@
 - [x] Lo básico: mandos visibles, andar, girar, teletransporte.
 - [x] Barca: teletransporte del muelle a la barca, coger los remos con el grip, remar y volver (probado el 27/10).
 - [x] Palmeras: sacudir, que caigan cocos y la llave.
-- [ ] Catalejo: alargarlo con dos manos, mirar por el ocular y ver el barco → `¡Barco a la vista!`.
-- [ ] Barco fantasma: llegar remando (`barco`), teletransportarse a la cubierta, luchar contra los esqueletos.
+- [ ] Tótem narrador: al acercarte cuenta la historia con la voz (`Historia_completa.mp3`).
+- [ ] Arañas: salen de las rocas al acercarte y te atacan; la espada las mata.
+- [ ] Barco fantasma: llegar remando (`barco`), subir por la escala o teletransportarse a la cubierta, luchar contra los esqueletos.
 - [ ] Final: llave en el cofre de día ("solo bajo la luna…") → darle la vuelta al reloj de arena → noche → se abre → maldición rota → victoria.
+- [ ] Menú de la muñeca (**Y**, carta náutica): movimiento continuo, giro, viñeta, hora, volumen; que se lea bien y que la fila se ilumine al apuntar.
+- [ ] Escalado (cuando esté hecho, paso 0.2).
 
 ---
 
 ## C. Código pendiente (pedírselo a Claude Code), por prioridad
-1. ~~Mapa / carta~~: **hecho** (`TreasureMap`, `MapMarker`, *Isla Pirata > Carta*), falta probarlo.
-2. ~~**Menú de la muñeca**~~: **hecho** (`WristMenu`, *Isla Pirata > Menu muneca*), falta montarlo y probarlo. Era:
-   - tipo de movimiento: teletransporte / continuo;
-   - giro por saltos / suave;
-   - viñeta de confort;
-   - hora del día;
-   - volumen;
-   - reiniciar.
+1. **Escalado**: maqueta de la isla o carta más bonita (paso 0.2).
+2. *(Si sobra tiempo)* trepar a una palmera (Climb Interactable de XRI), resaltado al apuntar objetos.
 
-   El EventSystem con XRUIInputModule ya lo crea la herramienta de la carta. El botón **Menú** del mando izquierdo ya lo usa la carta, así que el menú de opciones irá con otro botón (p. ej. **Y**).
-3. **Texto de introducción** al empezar, en el muelle al amanecer.
-4. **Espada** sencilla junto a la barca.
-5. Sonidos de golpes, remo y cofre (asset `AS_Casual_Island_Game_Sounds_FREE`).
-6. *(Si sobra tiempo)* trepar a una palmera (Climb Interactable de XRI), resaltado al apuntar objetos, cinturón para guardar la espada y el catalejo.
+Hecho y ya no pendiente: menú de la muñeca, texto/voz de introducción (tótem narrador), espada y funda, sonidos (asset + `ProceduralSounds`), pistas de controles (`TutorialHints`).
 
 ## D. Entrega
-- [ ] **Documento**: objetivo de la aplicación, **manual de uso** de las interacciones 3D y **disclosure notice**. Hay que declarar el uso de Claude Code (LLM) en el código y las herramientas.
+- [ ] **Limpieza** (en una rama): *Isla Pirata > Limpieza del proyecto* (`GUIA_MONTAJE.md` > 12). Antes del build final, apagar los `debugLogs`.
+- [ ] **Documento**: objetivo de la aplicación, **manual de uso** de las interacciones 3D y **disclosure notice**. Hay que declarar el uso de Claude Code (LLM) en el código y las herramientas. Citar las fuentes *Pirata One*, *IM Fell English SC* y *Libre Baskerville* (Google Fonts, SIL OFL 1.1).
 - [ ] **Vídeo** del recorrido completo: grabación del Quest o OBS sobre la ventana Game.
 - [ ] Carpetas a entregar: `Assets`, `Packages`, `ProjectSettings`, `UserSettings`.
 
