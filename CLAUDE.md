@@ -15,7 +15,7 @@ Por qué existe cada pieza (mantener esta coherencia al añadir cosas):
 | Pieza | Motivo en la historia | Mecánica / requisito |
 |---|---|---|
 | Barca en el muelle | Con la que huiste del barco | Remar con los brazos (navegación propia) |
-| ~~Catalejo~~, ~~Mapa / carta~~ | Quitados el 29/10 (ver 5.8) | **El escalado queda sin cubrir**: hay que decidir con qué objeto (ver `PROXIMOS_PASOS.md`) |
+| ~~Catalejo~~, ~~Mapa / carta~~ | Quitados el 29/10 (ver 5.8) | Sin escalado (decidido el 30/10: no se hace; la manipulación se cubre con traslación y rotación) |
 | **Palmeras / llave** | La escondiste de noche y no recuerdas en cuál | Sacudir palmeras (selección + feedback háptico) → `llave` |
 | **Arañas, cocos** | Peligros de la isla | Combate, coger y lanzar |
 | **Espada** | Para defenderte de la tripulación maldita | Combate |
@@ -339,7 +339,7 @@ Scripts:
 
 ### 5.8 Quitado el 29/10: carta y catalejo
 - Se borraron `TreasureMap`, `MapMarker`, `GuidedTravel`, `Telescope`, `MapSetupTool`, `TelescopeSetupTool`, `Carta.prefab` y `MapaIsla.png`. El objetivo `otear` ya no existe (`GameSetupTool` aún lo busca al ordenar objetivos; es inofensivo). La carta se quitó porque **estéticamente no quedaba bien** (pergamino plano con una foto cenital).
-- Ojo: **el requisito de escalado** lo cumplía la carta; ahora **ningún script escala** (no hay `allowTwoHandedScaling` en ningún sitio). Hay que cubrirlo con otro objeto: ver `PROXIMOS_PASOS.md`.
+- El escalado lo cubría la carta; ahora ningún script escala (no hay `allowTwoHandedScaling` en ningún sitio). **Decidido el 30/10: no se sustituye**; la manipulación se cubre con traslación (coger, mover y lanzar la llave, la espada y los cocos) y rotación. Si el profesor lo pidiera, la vía rápida es activar el escalado con dos manos del transformer de un `XRGrabInteractable` (se propuso un barco en una botella).
 - Restos en la escena guardada (a borrar a mano en la Hierarchy): `Lugares (carta)` con sus hijos `Lugar Muelle`, `Lugar Palmeral` y `Lugar Barco fantasma` (con componentes *Missing Script*, eran `MapMarker`) y `Boton Viaje carta` dentro de `Menu Muneca`.
 
 ### 5.9 Quitado el 29/10: `BoatDoctor`
@@ -405,7 +405,7 @@ Lista de tareas concreta para la siguiente sesión, ideas de mejora y lo que fal
 | 4 | `Health` + cocos + arañas (nidos) | Montado; falta probar |
 | 5 | Espada (+ funda) | Espada montada; funda (`SwordHolster`) sin montar; falta probar |
 | 6 | Maldición: reloj de arena, cofre de noche, tótems, esqueletos que se desmoronan | Montado; falta probar |
-| 6b | **Escalado** (sustituto de la carta) | **Pendiente de decidir** |
+| 6b | Escalado (sustituto de la carta) | Descartado el 30/10: basta con traslación y rotación |
 | 6c | Menú de la muñeca (configuración de la navegación y control) | Montado; falta probar |
 | 7 | Día/noche y `GameManager` (objetivo y final) | Montado; falta probar |
 | 8a | Escena propia copiando la demo (*Crear escena propia*) | Hecho (`IslaPirata.unity`) |
@@ -423,7 +423,6 @@ Lista de tareas concreta para la siguiente sesión, ideas de mejora y lo que fal
 **Paso 9, optimización y confort:** batching, luces, sombras, tamaño de texturas; viñeta al girar/moverse y snap turn por defecto.
 
 ### Pendientes conocidos
-- **Escalado:** ningún objeto lo cubre desde que se quitó la carta (ver 5.8 y `PROXIMOS_PASOS.md`).
 - **Restos en la escena:** borrar `BoatDoctor` (hijo de la barca) y `Lugares (carta)` (ver 5.8 y 5.9). `Boton Viaje carta` desaparece al volver a crear el menú de la muñeca.
 - **Interfaz (30/10):** elegir `panelLook` (Madera o Banda) y probar con el casco el menú de carta náutica, las fuentes (Libre Baskerville) y el arranque que espera al casco (`GameIntro.waitForHeadset`).
 - Montar `PlayerRescue` y `SwordHolster`, que no están en la escena guardada.

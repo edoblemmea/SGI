@@ -2,7 +2,7 @@
 
 **Resumen:**
 - La historia es la del **barco fantasma** (ver `CLAUDE.md` > *Historia*): eres el grumete que no fue maldito y vuelves para liberar a tu tripulación de esqueletos.
-- Todo el código está escrito y **la mayoría ya está montado en `IslaPirata.unity`** (revisado leyendo la escena guardada el 30/10). Falta sobre todo **probar con el casco** y **cubrir el escalado**.
+- Todo el código está escrito y **la mayoría ya está montado en `IslaPirata.unity`** (revisado leyendo la escena guardada el 30/10). Falta sobre todo **probar con el casco** y **preparar la entrega**.
 - Trabaja siempre en **`Assets/Scenes/IslaPirata.unity`** y en la rama **`barco-fantasma`**. Cada paso usa un botón del menú **Isla Pirata**.
 - Si algo sale raro, pásale a Claude Code las líneas de la Console o una captura.
 
@@ -20,14 +20,8 @@
 - [ ] Borrar `Assets/_Recovery` desde el Project (era la copia de seguridad de la escena tras el cierre de Unity).
 - [ ] Commit en `barco-fantasma` (hay muchos cambios sin guardar en git: scripts nuevos, `Assets/UI`, `Assets/Resources`).
 
-### 0.2 Escalado (requisito de la práctica, sin cubrir)
-Desde que se quitó la carta no hay ningún objeto que se escale. Opciones (decidir una):
-- **A. Maqueta de la isla (recomendada).** Una isla en miniatura en 3D (*World in Miniature*) sobre un barril o una mesa del muelle. Se coge con dos manos y se agranda o se encoge (0,5x a 3x). Muestra un muñequito donde estás tú y el barco fantasma. En la historia: la tallaste mientras estabas escondido. Opcional: tocar un punto de la maqueta = viajar allí (segundo método de navegación). Necesita una herramienta que convierta el Terrain en una malla pequeña (el Terrain no se puede escalar), más un script.
-- **B. Carta más bonita.** Recuperar el código de la carta desde git (estaba antes del commit `deab02e`) y cambiar solo el aspecto:
-  - dibujo a mano estilo tinta, con rosa de los vientos y una X, en vez de la foto cenital;
-  - pergamino con bordes quemados y algo curvado, en vez de un Quad plano;
-  - se desenrolla entre dos varillas de madera al separar las manos.
-- [ ] Decidir A o B y pedírselo a Claude Code.
+### 0.2 Escalado: descartado
+- [x] Decidido el 30/10: **no se hace**. La manipulación se cubre con **traslación** (coger, mover y lanzar la llave, la espada y los cocos) y **rotación**. Si el profesor lo pidiera, la vía rápida es el escalado con dos manos del `XR Grab Interactable` (p. ej. un barco en una botella).
 
 ---
 
@@ -111,13 +105,11 @@ Muestras de todos los diseños: https://claude.ai/artifact/BJvN5ifdy85JwYH3v31T8
 - [ ] Barco fantasma: llegar remando (`barco`), subir por la escala o teletransportarse a la cubierta, luchar contra los esqueletos.
 - [ ] Final: llave en el cofre de día ("solo bajo la luna…") → darle la vuelta al reloj de arena → noche → se abre → maldición rota → victoria.
 - [ ] Menú de la muñeca (**Y**, carta náutica): movimiento continuo, giro, viñeta, hora, volumen; que se lea bien y que la fila se ilumine al apuntar.
-- [ ] Escalado (cuando esté hecho, paso 0.2).
 
 ---
 
 ## C. Código pendiente (pedírselo a Claude Code), por prioridad
-1. **Escalado**: maqueta de la isla o carta más bonita (paso 0.2).
-2. *(Si sobra tiempo)* trepar a una palmera (Climb Interactable de XRI), resaltado al apuntar objetos.
+1. *(Si sobra tiempo)* trepar a una palmera (Climb Interactable de XRI), resaltado al apuntar objetos.
 
 Hecho y ya no pendiente: menú de la muñeca, texto/voz de introducción (tótem narrador), espada y funda, sonidos (asset + `ProceduralSounds`), pistas de controles (`TutorialHints`).
 
