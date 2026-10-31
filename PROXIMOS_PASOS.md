@@ -16,9 +16,9 @@
 
 ### 0.1 Guardar la escena y limpiar restos
 - [x] `BoatDoctor`, `Lugares (carta)` y `Boton Viaje carta` ya no están en la escena guardada, y no hay *Missing Script* (revisado el 30/10).
-- [ ] **Ctrl+S en `IslaPirata.unity`**: a las 19:50 del 30/10 la escena guardada seguía siendo la de las 18:10 (la recuperada tras el cierre de Unity). El menú de carta náutica solo existía en memoria.
-- [ ] Borrar `Assets/_Recovery` desde el Project (era la copia de seguridad de la escena tras el cierre de Unity).
-- [ ] Commit en `barco-fantasma` (hay muchos cambios sin guardar en git: scripts nuevos, `Assets/UI`, `Assets/Resources`).
+- [x] **Ctrl+S en `IslaPirata.unity`**: a las 19:50 del 30/10 la escena guardada seguía siendo la de las 18:10 (la recuperada tras el cierre de Unity). El menú de carta náutica solo existía en memoria.
+- [x] Borrar `Assets/_Recovery` desde el Project (era la copia de seguridad de la escena tras el cierre de Unity).
+- [x] Commit en `barco-fantasma` (`4061489`, 30/10) (hay muchos cambios sin guardar en git: scripts nuevos, `Assets/UI`, `Assets/Resources`).
 
 ### 0.2 Escalado: descartado
 - [x] Decidido el 30/10: **no se hace**. La manipulación se cubre con **traslación** (coger, mover y lanzar la llave, la espada y los cocos) y **rotación**. Si el profesor lo pidiera, la vía rápida es el escalado con dos manos del `XR Grab Interactable` (p. ej. un barco en una botella).
@@ -61,7 +61,7 @@
 
 ### 6b. Menú de la muñeca
 - [x] **Isla Pirata > Menu muneca** creado.
-- [ ] Se vuelve a crear en el paso 6d con el aspecto nuevo.
+- [x] Vuelto a crear en el paso 6d (carta náutica).
 
 ### 6c. Intro y barras de vida (código del 30/10)
 - [ ] **Isla Pirata > Intro (historia y titulo)**. En la Console: `[INTRO] Intro lista. Totem: ok, dia/noche: ok, musica: ok`. Si dice que el inicio está LEJOS del tótem, acerca `Inicio jugador`.
@@ -82,7 +82,7 @@ Muestras de todos los diseños: https://claude.ai/artifact/BJvN5ifdy85JwYH3v31T8
 - [x] Prueba con el casco: subtítulos con la línea en dorado, pista de **Y** encima del mando izquierdo, aviso "Tu objetivo" al acabar la intro, "¡Objetivo cumplido!" al coger la llave; que los textos del menú se lean bien (si alguno queda pequeño, díselo a Claude Code).
 
 ### 7. Lo que falta montar
-- [ ] **Isla Pirata > Rescate del jugador** (`PlayerRescue`): no está en la escena guardada. Sin él, si caes al mar no vuelves a la barca.
+- [x] **Isla Pirata > Rescate del jugador** (`PlayerRescue`): ya está en la escena.
 - [x] **Isla Pirata > Espada > 3. Funda** (`SwordHolster`): ya está en la escena.
 - [ ] **Isla Pirata > Juego** > sección 3: pantalla de fin y velo de daño (comprobar).
 
@@ -92,7 +92,7 @@ Muestras de todos los diseños: https://claude.ai/artifact/BJvN5ifdy85JwYH3v31T8
 ### 9. Git
 - [x] Conflicto de `OpenXRPackageSettings.asset` resuelto.
 - [x] `master` igualada a `barco-fantasma` (30/10).
-- [ ] Commit y push de la limpieza del paso 0.1. Para pasar los cambios a `master` otra vez: `git checkout master`, `git pull`, `git merge --ff-only barco-fantasma`, `git push`, `git checkout barco-fantasma`.
+- [ ] Push de `barco-fantasma` y pasar los cambios a `master`. Para pasar los cambios a `master` otra vez: `git checkout master`, `git pull`, `git merge --ff-only barco-fantasma`, `git push`, `git checkout barco-fantasma`.
 
 ---
 
