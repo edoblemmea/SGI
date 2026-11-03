@@ -170,6 +170,7 @@ Estado (revisado el 30/10 leyendo la escena guardada): **todo el código está e
   - al encajar la llave correcta cambia de modelo, muestra las monedas, gasta la llave y completa el objetivo `cofre`;
   - para probarlo sin casco: menú contextual **Abrir ahora**.
 - **Bolsillo (`KeyPocket`, *Llave y cofre > 4*):** para llevar la llave mientras remas o trepas (hacen falta las dos manos y el grip, y el fondo de la barca no tiene collider). Se suelta junto a la cadera derecha (bolita verde) y se queda ahí (65 cm bajo la cabeza), kinematic. **No** se usa trigger (el rayo de XRI ignora los triggers): se hace `Physics.IgnoreCollision` con la barca, el CharacterController y la escala. Así se puede **sacar con el rayo desde lejos** sin agacharse. Si cae por debajo de `lostBelowY` (el agua) vuelve sola. Prefijo `[BOLSILLO]`.
+- (03/11) El bolsillo también devuelve la llave si **se cuela bajo el Terrain** (`returnIfUnderTerrain`) o si **cae bajo un suelo** más de `underFloorDrop` (1,2 m) por debajo de tus pies, p. ej. a la bodega del barco (`returnIfUnderFloor`: raycast hacia arriba que choca con la cubierta). Tiene que seguir así `lostDelay` (1 s).
 - La llave necesita su Mesh Collider en **Convex** (si no, Unity lo ignora con Rigidbody dinámico y atraviesa el suelo): lo hace *Preparar llave*.
 - Lo monta *Isla Pirata > Llave y cofre*.
 
@@ -234,6 +235,7 @@ Scripts:
 - **Esqueletos (la tripulación maldita):**
   - `Assets/Prefabs/Esqueleto.prefab` (DungeonCharacters, desempaquetado), con `EsqueletoAnimator.controller` (idle, walk, onehand_attack) y `applyRootMotion` off;
   - ataque con *windup* de 0,4 s (se puede esquivar), vida 50, `Health.destroyOnDeath` **off**;
+  - (03/11) `EnemyAI.firstAttackDelay` = 3 s en el prefab: al verte se acercan pero no golpean hasta pasados 3 s (atacaban nada más subir). Las arañas hacen 7 de daño (antes 10);
   - `SkeletonCrumble`: al morir **o al romperse la maldición** añade en tiempo real Rigidbody + collider + CharacterJoint a los huesos `Bip001` (pelvis, columna, cabeza, brazos, piernas), cae como un muñeco de trapo, se hunde y se destruye. `EnemyAI.fallOverIfNoDieAnim` va desactivado;
   - lo crea *Isla Pirata > Esqueletos piratas*, que también los coloca alrededor del cofre y quita los antiguos leñadores (`Pirata.prefab`).
 - **Maldición** (*Isla Pirata > Maldición*):
@@ -289,6 +291,7 @@ Scripts:
 
 ### 5.5d Pistas de controles (`TutorialHints`)
 - Las crea solo el `GameManager` al empezar (`tutorialHints`). Cada pista sale **una vez**, en contexto (andar, menú Y, palmera, llave, bolsillo, espada, arañas, barca, remar, bajar, escala, cofre, reloj, daño); espera a que el tótem termine (`StoryTotem.IsTalking`) y a que acabe la intro (`GameIntro.Running`). Busca los objetos por tipo. Prefijo `[PISTAS]`.
+- (03/11) Tras probarlas: duran 6 s (`secondsPerHint`, antes 8) y las de mando nunca quedan a menos de `minHandHintDistance` (0,6 m) de los ojos. El aviso de objetivo (`ObjectiveToast`) encoge el texto si no cabe (se salía al cumplir `barco`).
 - (30/10) En un panel del estilo (madera o banda, `panelLook`) con el **dibujo de los botones** (`PirateStyle.MakeButtonIcon`: GRIP, B, X, Y, Stick izq./der.). Cada pista tiene `Side`: `View` = por debajo de la vista con seguimiento suave; `Left`/`Right` = **encima de ese mando** (posición del casco con `XRHandInput.TryGetWorldPosition`), más pequeña (`handScale`), y vibra ese mando.
 
 ### 5.5h Estilo de la interfaz (`PirateStyle`, *Isla Pirata > Estilo pirata*)

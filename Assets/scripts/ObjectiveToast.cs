@@ -57,7 +57,7 @@ public class ObjectiveToast : MonoBehaviour
         var o = gm.objectives.Find(x => x.id == id);
         var next = gm.CurrentObjective;
         if (next == null) return;   // era el ultimo: sale la pantalla de victoria
-        string done = o != null ? $"<s>{o.description}</s>\n\n" : "";
+        string done = o != null ? $"<s>{o.description}</s>\n<size=40%> </size>\n" : "";   // media linea de separacion
         Show("¡Objetivo cumplido!", done + $"<b>Ahora:</b> {next.description}");
     }
 
@@ -117,6 +117,13 @@ public class ObjectiveToast : MonoBehaviour
         body = PirateStyle.MakeText(content, "Texto", 26, false, s.paperText, 36f);
         body.rectTransform.anchorMax = new Vector2(1f, 0.6f);
         body.alignment = TextAlignmentOptions.Top;
+        // Si el texto no cabe (p. ej. "cumplido" + "Ahora: ..."), se encoge en vez de salirse del cuadro
+        body.enableAutoSizing = true;
+        body.fontSizeMin = 16f;
+        body.fontSizeMax = 26f;
+        title.enableAutoSizing = true;
+        title.fontSizeMin = 28f;
+        title.fontSizeMax = 46f;
         board.gameObject.SetActive(false);
     }
 }

@@ -213,7 +213,7 @@ MonoBehaviour:
   chaseSpeed: 4
   maxHeightDifference: 2.5
   attackRange: 1.235394
-  attackDamage: 10
+  attackDamage: 7
   attackCooldown: 1.5
   attackWindup: 0
   animator: {fileID: 7315616543465989029}

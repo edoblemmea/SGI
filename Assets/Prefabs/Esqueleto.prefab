@@ -630,6 +630,7 @@ MonoBehaviour:
   attackDamage: 15
   attackCooldown: 1.8
   attackWindup: 0.4
+  firstAttackDelay: 3
   animator: {fileID: 4611039433593448150}
   speedParam: Speed
   attackTrigger: Attack

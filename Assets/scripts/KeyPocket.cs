@@ -27,6 +27,14 @@ public class KeyPocket : MonoBehaviour
     public float lostBelowY = -100f;
     [Tooltip("Tambien vuelve si queda a mas de esta distancia del jugador y nadie la tiene (0 = nunca)")]
     public float returnIfFartherThan = 0f;
+    [Tooltip("Vuelve si se cuela por debajo del Terrain (03/11: se colo bajo la isla con la llave en la mano)")]
+    public bool returnIfUnderTerrain = true;
+    [Tooltip("Vuelve si cae por debajo de un suelo y queda mas de 'Under Floor Drop' m por debajo de tus pies " +
+             "(03/11: se cayo al piso de abajo del barco fantasma)")]
+    public bool returnIfUnderFloor = true;
+    public float underFloorDrop = 1.2f;
+    [Tooltip("Segundos que tiene que estar asi antes de volver")]
+    public float lostDelay = 1f;
 
     [Header("Ayuda visual")]
     [Tooltip("Bolita en la cadera: se ve mientras llevas la llave en la mano; verde = sueltala aqui")]
@@ -41,11 +49,16 @@ public class KeyPocket : MonoBehaviour
     Collider[] keyCols;
     Renderer marker;
     bool wasStored;
+    Transform feet;          // XR Origin (los pies del jugador)
+    float lostTimer, lostCheck;
+    string lostWhy;
     Collider[] ignoreWhileStored;   // barca, jugador y escala: la llave guardada no debe empujarlos
 
     void Start()
     {
         if (head == null && Camera.main != null) head = Camera.main.transform;
+        var origin = head != null ? head.GetComponentInParent<Unity.XR.CoreUtils.XROrigin>() : null;
+        feet = origin != null ? origin.transform : null;
         if (key == null) { Debug.LogWarning("[BOLSILLO] Falta 'Key' (la llave). Usa Isla Pirata > Llave y cofre > 4."); enabled = false; return; }
         keyRb = key.GetComponent<Rigidbody>();
         keyCols = key.GetComponentsInChildren<Collider>(true);
@@ -78,7 +91,7 @@ public class KeyPocket : MonoBehaviour
         transform.SetPositionAndRotation(head.position + yaw * offset, yaw);
 
         if (HasKey) key.transform.SetPositionAndRotation(transform.position, transform.rotation * Quaternion.Euler(0f, 0f, 90f));
-        else if (key != null && !key.isSelected && Lost()) Store("la llave se habia perdido");
+        else if (key != null && !key.isSelected && Lost()) Store(lostWhy != null ? lostWhy : "la llave se habia perdido");
 
         if (marker != null)
         {
@@ -96,8 +109,56 @@ public class KeyPocket : MonoBehaviour
 
     bool Lost()
     {
+        lostWhy = null;
         if (key.transform.position.y < lostBelowY) return true;
+        if (Unreachable()) return true;
         return returnIfFartherThan > 0f && head != null && Vector3.Distance(key.transform.position, head.position) > returnIfFartherThan && keyRb != null && keyRb.IsSleeping();
+    }
+
+    // Colada bajo el terreno o caida bajo un suelo (bodega): se comprueba 4 veces por segundo y tiene que seguir asi 'lostDelay' s
+    bool Unreachable()
+    {
+        if (key.GetComponentInParent<ShakeablePalm>() != null) { lostTimer = 0f; return false; }   // aun escondida en la copa
+        lostCheck -= Time.deltaTime;
+        if (lostCheck > 0f) return lostTimer >= lostDelay;
+        lostCheck = 0.25f;
+        string why = null;
+        Vector3 p = key.transform.position;
+
+        if (returnIfUnderTerrain)
+            foreach (var t in Terrain.activeTerrains)
+            {
+                Vector3 tp = t.transform.position, size = t.terrainData.size;
+                if (p.x < tp.x || p.z < tp.z || p.x > tp.x + size.x || p.z > tp.z + size.z) continue;
+                if (p.y < t.SampleHeight(p) + tp.y - 0.2f) { why = "se habia colado bajo el terreno"; break; }
+            }
+
+        if (why == null && returnIfUnderFloor && feet != null && p.y < feet.position.y - underFloorDrop
+            && (keyRb == null || keyRb.isKinematic || keyRb.linearVelocity.magnitude < 0.3f) && UnderAFloor(p))
+            why = "se habia caido por debajo del suelo";
+
+        if (why == null) { lostTimer = 0f; return false; }
+        if (debugLogs && lostTimer <= 0f) Debug.Log($"[BOLSILLO] La llave {why}: vuelve al bolsillo en {lostDelay:F1} s si sigue asi");
+        lostTimer += 0.25f;
+        lostWhy = why;
+        return lostTimer >= lostDelay;
+    }
+
+    // Hay algo solido (cubierta, terreno...) entre la llave y la altura de tus pies
+    bool UnderAFloor(Vector3 p)
+    {
+        float up = feet.position.y + 0.5f - p.y;
+        bool back = Physics.queriesHitBackfaces;
+        Physics.queriesHitBackfaces = true;   // la cubierta vista desde abajo puede ser la cara de atras de la malla
+        var hits = Physics.RaycastAll(p + Vector3.up * 0.05f, Vector3.up, up, ~0, QueryTriggerInteraction.Ignore);
+        Physics.queriesHitBackfaces = back;
+        foreach (var h in hits)
+        {
+            if (h.transform.IsChildOf(key.transform)) continue;
+            if (h.transform.IsChildOf(feet)) continue;   // el propio jugador
+            return true;
+        }
+        return false;
     }
 
     // La llave encajada en la cerradura del cofre tambien esta "seleccionada" (por el socket): no es una mano
@@ -145,6 +206,7 @@ public class KeyPocket : MonoBehaviour
     void Store(string why)
     {
         HasKey = true;
+        lostTimer = 0f;
         if (keyRb != null)
         {
             if (!keyRb.isKinematic) { keyRb.linearVelocity = Vector3.zero; keyRb.angularVelocity = Vector3.zero; }

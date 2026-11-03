@@ -41,6 +41,9 @@ public class EnemyAI : MonoBehaviour
     public float attackCooldown = 1.5f;
     [Tooltip("Segundos entre empezar el ataque y que el golpe haga dano (0 = inmediato)")]
     public float attackWindup = 0f;
+    [Tooltip("Segundos desde que te ve hasta que puede dar el PRIMER golpe (se acerca, pero no ataca todavia). " +
+             "Esqueletos: 3 (03/11, atacaban nada mas subir al barco). Aranas: 0")]
+    public float firstAttackDelay = 0f;
 
     [Header("Ataque visible (salto)")]
     [Tooltip("Al atacar, el modelo se encoge, salta hacia el jugador y vuelve: se ve claramente que ataca. El dano llega al saltar")]
@@ -326,6 +329,11 @@ public class EnemyAI : MonoBehaviour
         if (s == Current) return;
         if (s == State.Chase && Current == State.Patrol)
         {
+            if (firstAttackDelay > 0f)
+            {
+                attackTimer = Mathf.Max(attackTimer, firstAttackDelay);
+                if (debugLogs) Debug.Log($"[ENEMIGO] '{name}' te ha visto: primer ataque dentro de {firstAttackDelay:F1} s");
+            }
             if (audioSource != null && alertClip != null) audioSource.PlayOneShot(alertClip);
             else ProceduralSounds.Play(VoiceClip(), transform.position, 0.6f);
         }

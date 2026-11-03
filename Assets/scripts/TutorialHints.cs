@@ -12,8 +12,8 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 /// Lo crea solo el GameManager al empezar (casilla 'Tutorial Hints').
 public class TutorialHints : MonoBehaviour
 {
-    [Tooltip("Segundos que se ve cada pista")]
-    public float secondsPerHint = 8f;
+    [Tooltip("Segundos que se ve cada pista (03/11: 8 -> 6, en el casco molestaban)")]
+    public float secondsPerHint = 6f;
     [Tooltip("Distancia del texto delante de los ojos (m)")]
     public float distance = 1.1f;
     [Tooltip("Cuanto por debajo de la mirada (m)")]
@@ -22,6 +22,9 @@ public class TutorialHints : MonoBehaviour
     public float aboveHand = 0.14f;
     [Tooltip("Tamano de la pista junto al mando respecto a la que va delante de la vista")]
     [Range(0.3f, 1f)] public float handScale = 0.55f;
+    [Tooltip("Distancia minima (en horizontal) entre los ojos y una pista de mando: si acercas la mano a la cara " +
+             "(p. ej. con la llave o un coco en la mano), la pista se aparta hasta aqui")]
+    public float minHandHintDistance = 0.6f;
     public bool debugLogs = true;
 
     enum Side { View, Left, Right }
@@ -236,6 +239,14 @@ public class TutorialHints : MonoBehaviour
         {
             Vector3 toHead = Vector3.ProjectOnPlane(head.position - hand, Vector3.up).normalized;
             target = hand + Vector3.up * aboveHand + toHead * 0.04f;
+            // Mano cerca de la cara: apartar la pista hacia delante para que no quede pegada a los ojos
+            Vector3 flat = Vector3.ProjectOnPlane(target - head.position, Vector3.up);
+            if (flat.magnitude < minHandHintDistance)
+            {
+                Vector3 dir = flat.sqrMagnitude > 0.0025f ? flat.normalized : Vector3.ProjectOnPlane(head.forward, Vector3.up).normalized;
+                if (dir.sqrMagnitude < 0.001f) dir = head.up;
+                target = new Vector3(head.position.x, target.y, head.position.z) + dir * minHandHintDistance;
+            }
             follow = 12f;
         }
         else
