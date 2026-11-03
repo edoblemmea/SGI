@@ -1,4 +1,4 @@
-# Próximos pasos (actualizado el 30/10/2026, 20:00)
+# Próximos pasos (actualizado el 03/11/2026)
 
 **Resumen:**
 - La historia es la del **barco fantasma** (ver `CLAUDE.md` > *Historia*): eres el grumete que no fue maldito y vuelves para liberar a tu tripulación de esqueletos.
@@ -114,7 +114,9 @@ Muestras de todos los diseños: https://claude.ai/artifact/BJvN5ifdy85JwYH3v31T8
 Hecho y ya no pendiente: menú de la muñeca, texto/voz de introducción (tótem narrador), espada y funda, sonidos (asset + `ProceduralSounds`), pistas de controles (`TutorialHints`).
 
 ## D. Entrega
-- [ ] **Limpieza** (en una rama): *Isla Pirata > Limpieza del proyecto* (`GUIA_MONTAJE.md` > 12). Antes del build final, apagar los `debugLogs`.
+- [x] **Limpieza** (rama `limpieza`, commit `874ba21`, 01/11): 849 ficheros sin usar a la papelera (demos de los assets, `Maritime Telescope`, `NekoLegends`, `VRTemplateAssets` sin usar, `Default Example URP Assets`…). Revisado el 03/11: la escena y los prefabs no tienen referencias rotas, Build Profiles solo lleva `IslaPirata.unity` y el código compila.
+- [ ] Abrir el proyecto en Unity desde la rama `limpieza`, Play y comprobar que no sale ningún *Missing* ni material rosa. Si va bien: `git checkout master`, `git merge --ff-only limpieza` (o `barco-fantasma` y luego `limpieza`), `git push`.
+- [ ] Antes del build final, apagar los `debugLogs` (*Limpieza del proyecto*).
 - [ ] **Documento**: objetivo de la aplicación, **manual de uso** de las interacciones 3D y **disclosure notice**. Hay que declarar el uso de Claude Code (LLM) en el código y las herramientas. Citar las fuentes *Pirata One*, *IM Fell English SC* y *Libre Baskerville* (Google Fonts, SIL OFL 1.1).
 - [ ] **Vídeo** del recorrido completo: grabación del Quest o OBS sobre la ventana Game.
 - [ ] Carpetas a entregar: `Assets`, `Packages`, `ProjectSettings`, `UserSettings`.

@@ -109,10 +109,10 @@ Assets/
   DungeonCharacters/       ← esqueletos = la tripulación maldita (Generic, huesos Bip001; clips idle, walk, onehand_attack en FBX separados; sin muerte)
   StaffOfPain/             ← palo con calaveras = tótems de la maldición (material Standard, se convierte a URP; trae una Reflection Probe que se quita)
   FreeCharacter/           ← YA NO SE USA (leñadores); se puede borrar
-  Maritime Telescope/      ← YA NO SE USA (el catalejo se quitó el 29/10)
   Danvil/                  ← espada Rusty Sword
   RockFREE/                ← rocas de los nidos de arañas
-  Stylized_Pirate_Ship/ (barco fantasma), NekoLegends/, AS_Casual_Island_Game_Sounds_FREE/
+  Stylized_Pirate_Ship/ (barco fantasma), AS_Casual_Island_Game_Sounds_FREE/
+  (Maritime Telescope/ y NekoLegends/ se borraron en la limpieza del 01/11, rama `limpieza`)
   XR/Settings/             ← OpenXR (el aviso "Importer generated inconsistent result" es inofensivo)
   Samples/XR Interaction Toolkit/3.5.1/Starter Assets/   ← rig, locomotion, input actions
 GUIA_MONTAJE.md            ← montaje en el editor, paso a paso, de todos los sistemas
@@ -426,7 +426,7 @@ Lista de tareas concreta para la siguiente sesión, ideas de mejora y lo que fal
 - **Restos en la escena:** borrar `BoatDoctor` (hijo de la barca) y `Lugares (carta)` (ver 5.8 y 5.9). `Boton Viaje carta` desaparece al volver a crear el menú de la muñeca.
 - **Interfaz (30/10):** elegir `panelLook` (Madera o Banda) y probar con el casco el menú de carta náutica, las fuentes (Libre Baskerville) y el arranque que espera al casco (`GameIntro.waitForHeadset`).
 - Montar `PlayerRescue` y `SwordHolster`, que no están en la escena guardada.
-- Ramas de git: se trabaja en `barco-fantasma`; `master` se actualiza con `git merge --ff-only barco-fantasma` (el 30/10 estaban iguales).
+- Ramas de git: la limpieza (01/11) está en `limpieza` (sale de `barco-fantasma`); `master` sigue en `8fcb67f`, por detrás. Antes se trabajaba en `barco-fantasma`; `master` se actualiza con `git merge --ff-only barco-fantasma` (el 30/10 estaban iguales).
 
 ## 9. Plantilla para pedir tareas a Claude Code
 
