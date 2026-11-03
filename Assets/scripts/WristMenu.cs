@@ -47,6 +47,9 @@ public class WristMenu : MonoBehaviour
     [Range(0.05f, 0.5f)] public float volumeStep = 0.1f;
     [Tooltip("Recordar las opciones entre partidas (en este dispositivo)")]
     public bool saveSettings = true;
+    [Tooltip("Ensenar la opcion 'Movimiento' (teletransporte / continuo). Desmarcado (03/11, no funcionaba en el casco): " +
+             "la fila se oculta, las de debajo suben y el movimiento se queda como este en el XR Origin de la escena")]
+    public bool showMoveOption = false;
 
     [Header("Botones (los crea la herramienta)")]
     public Button moveButton;
@@ -233,6 +236,7 @@ public class WristMenu : MonoBehaviour
         Bind(speedButton, () => { speedIndex = (speedIndex + 1) % moveSpeeds.Length; Changed($"Velocidad {moveSpeeds[speedIndex]:F1} m/s"); });
         Bind(vignetteButton, () => { vignetteOn = !vignetteOn; Changed("Vineta " + (vignetteOn ? "SI" : "NO")); });
         if (travelButton != null) travelButton.gameObject.SetActive(false);   // la carta se quito
+        if (!showMoveOption) HideMoveOption();
         Bind(volumeDownButton, () => { volume = Mathf.Clamp01(volume - volumeStep); Changed($"Volumen {volume * 100f:F0} %"); });
         Bind(volumeUpButton, () => { volume = Mathf.Clamp01(volume + volumeStep); Changed($"Volumen {volume * 100f:F0} %"); });
         Bind(timeButton, ToggleTime);
@@ -335,6 +339,21 @@ public class WristMenu : MonoBehaviour
         Refresh();
     }
 
+    // Oculta la fila "Movimiento" y sube una posicion las filas que tenia debajo en la misma pestana
+    void HideMoveOption()
+    {
+        if (moveButton == null) return;
+        var rows = new System.Collections.Generic.List<RectTransform>();
+        foreach (var b in new[] { moveButton, turnButton, snapButton, speedButton })
+            if (b != null && b.transform.parent == moveButton.transform.parent) rows.Add((RectTransform)b.transform);
+        rows.Sort((a, b) => b.anchoredPosition.y.CompareTo(a.anchoredPosition.y));   // de arriba abajo
+        int start = rows.IndexOf((RectTransform)moveButton.transform);
+        for (int i = rows.Count - 1; i > start; i--) rows[i].anchoredPosition = rows[i - 1].anchoredPosition;
+        moveButton.gameObject.SetActive(false);
+        if (debugLogs) Debug.Log("[MENU] Opcion 'Movimiento' oculta (showMoveOption desmarcado): " +
+            (leftHandManager != null ? (leftHandManager.smoothMotionEnabled ? "joystick izquierdo = andar" : "joystick izquierdo = teletransporte") : "sin Left Hand Manager"));
+    }
+
     void Changed(string what)
     {
         Apply();
@@ -366,7 +385,7 @@ public class WristMenu : MonoBehaviour
     void Apply()
     {
         // El joystick izquierdo cambia entre teletransporte y andar; el derecho sigue teletransportando (barca)
-        if (leftHandManager != null) leftHandManager.smoothMotionEnabled = smoothMove;
+        if (showMoveOption && leftHandManager != null) leftHandManager.smoothMotionEnabled = smoothMove;   // oculta: se deja como en la escena
         if (leftHandManager != null) leftHandManager.smoothTurnEnabled = smoothTurnOn;
         if (rightHandManager != null) rightHandManager.smoothTurnEnabled = smoothTurnOn;
 
